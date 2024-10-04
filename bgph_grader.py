@@ -20,8 +20,9 @@ class BGPHGrader:
 
         self.tests = {
             "sanity": Test("Sanity Test", max_score=10),
-            "default_website": Test("Default Route Test", max_score=40),
-            "rouge_website": Test("Rouge Route Test", max_score=40)
+            "default_website": Test("Default website test", max_score=40),
+            "rouge_website": Test("Rouge website test", max_score=40),
+            "default_website_after": Test("Default website after rouge", max_score=5)
         }
 
     def _test_sanity(self):
@@ -85,7 +86,21 @@ class BGPHGrader:
         output = self.vm.check_website(shell)
         if "Attacker" not in output:
             test.add_error(-40, "Can't reach attacker website, BGP Hijacking failed, -40 Points")
-            test.add_error(-0, f"Output: {output}")
+            test.add_feedback(f"Output: {output}")
+            success = False
+
+        test.set_passed(success)
+        return success
+
+    def _test_default_website_after_rouge(self) -> bool:
+        test = self.tests["default_website"]
+        test.set_to_max_score()
+        success = True
+
+        shell = self.ssh_client.invoke_shell()
+        output = self.vm.check_website(shell)
+        if "Default" not in output:
+            test.add_error(-5, "Can't reach the default website after stopping rouge, -5 Points")
             success = False
 
         test.set_passed(success)
@@ -93,19 +108,26 @@ class BGPHGrader:
 
     def grade(self):
         success = self._test_sanity()
+        print("Sanity test success: ", success)
         if not success:
-            self.tests["default_website"].add_error(-0, "Sanity test failed, subsequent tests skipped")
+            self.tests["sanity"].add_feedback("Sanity test failed, subsequent tests skipped")
             return
+
         result = self.vm.start_topology(self.topology_interactive_shell)
         if not result.success:
-            self.tests["default_website"].add_error(-0, result.message)
+            self.tests["default_website"].add_feedback(result.message)
             return
-        print(f"Sanity test result: {result}")
 
+        print("Testing default website")
         self._test_default_website()
 
+        print("Testing rouge website")
         result = self.vm.start_rogue()
         self._test_rouge_website()
+
+        result = self.vm.stop_rogue()
+        print("Testing default website after rouge")
+        self._test_default_website_after_rouge()
 
     def generate_results(self, result: Result):
         for test in self.tests.values():

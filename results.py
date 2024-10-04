@@ -32,6 +32,9 @@ class Test:
         self.score += deduction
         self.output += feedback + "\n"
 
+    def add_feedback(self, feedback: str):
+        self.output += feedback + "\n"
+
 
 class Result:
 

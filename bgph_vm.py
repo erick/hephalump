@@ -80,6 +80,7 @@ class BGPHVirtualMachine:
         return ssh_client
 
     def shutdown(self):
+        print("Shutting down mininet VM")
         ssh_client = self.get_ssh_terminal()
         if not ssh_client:
             return
@@ -136,13 +137,14 @@ class BGPHVirtualMachine:
         return_code = stdout.channel.recv_exit_status()
         if return_code != 0:
             return Result(False, std_err.read().decode())
-        time.sleep(5)
+        time.sleep(3)
         return Result(True)
 
     def stop_rogue(self):
         if not self.ssh_client:
             return Result(False, "SSH client not initialized")
         self.ssh_client.exec_command(f"cd {self.guest_submission_path} && bash ./stop_rogue.sh")
+        time.sleep(3)
         return Result(True)
 
     def check_website(self, shell) -> str:
