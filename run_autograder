@@ -2,4 +2,6 @@
 
 # cd to the directory of the script
 cd "/autograder/source"
+git clone https://github.com/daniel0076/fictional-doodle.git
+cd fictional-doodle
 python3 bgph_grader.py
