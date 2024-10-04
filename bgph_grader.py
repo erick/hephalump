@@ -70,6 +70,7 @@ class BGPHGrader:
 
         shell = self.ssh_client.invoke_shell()
         output = self.vm.check_website(shell)
+        print(f"Output: {output}")
         if "Default" not in output:
             test.add_error(-40, "Can't reach the default website, -40 Points")
             test.add_feedback(f"Output: {output}")
@@ -85,6 +86,7 @@ class BGPHGrader:
         success = True
         shell = self.ssh_client.invoke_shell()
         output = self.vm.check_website(shell)
+        print(f"Output: {output}")
         if "Attacker" not in output:
             test.add_error(-40, "Can't reach attacker website, BGP Hijacking failed, -40 Points")
             test.add_feedback(f"Output: {output}")
@@ -94,12 +96,13 @@ class BGPHGrader:
         return success
 
     def _test_default_website_after_rouge(self) -> bool:
-        test = self.tests["default_website"]
+        test = self.tests["default_website_after"]
         test.set_to_max_score()
         success = True
 
         shell = self.ssh_client.invoke_shell()
         output = self.vm.check_website(shell)
+        print(f"Output: {output}")
         if "Default" not in output:
             test.add_error(-5, "Can't reach the default website after stopping rouge, -5 Points")
             test.add_feedback(f"Output: {output}")
