@@ -12,6 +12,7 @@ class Test:
     score: int = 0
     output_format: str = "text"
     status: str = "failed"
+    visibility: str = "visible"
 
     def set_passed(self, passed: bool = True):
         if passed:
