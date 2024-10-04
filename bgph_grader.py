@@ -100,11 +100,11 @@ class BGPHGrader:
         if not result.success:
             self.tests["default_website"].add_error(-0, result.message)
             return
+        print(f"Sanity test result: {result}")
 
         self._test_default_website()
 
         result = self.vm.start_rogue()
-        print(result)
         self._test_rouge_website()
 
     def generate_results(self, result: Result):
@@ -121,7 +121,7 @@ def main():
         print("Failed to start mininet")
         exit(1)
     print("starting mininet VM")
-    time.sleep(60)
+    time.sleep(90)
 
     grader = BGPHGrader(bgph_vm)
     grader.grade()

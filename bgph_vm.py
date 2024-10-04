@@ -87,6 +87,7 @@ class BGPHVirtualMachine:
         ssh_client.close()
 
     def init(self):
+        print("Initializing mininet VM")
         self.ssh_client = self.get_ssh_terminal()
         if not self.ssh_client:
             return False
@@ -96,6 +97,8 @@ class BGPHVirtualMachine:
         # setup permissions
         time.sleep(1)
         self.ssh_client.exec_command(f"cd {self.guest_submission_path} && chmod +x *.sh")
+        _, stdout, std_err = self.ssh_client.exec_command(f"ls -al {self.guest_submission_path}")
+        print(f"Files in {self.guest_submission_path}: {stdout.read().decode()}")
         return self.ssh_client
 
     def send_cmd(self, shell, cmd: str, sleep_sec=2):
@@ -129,7 +132,7 @@ class BGPHVirtualMachine:
     def start_rogue(self) -> Result:
         if not self.ssh_client:
             return Result(False, "SSH client not initialized")
-        _, stdout, std_err = self.ssh_client.exec_command(f"cd {self.guest_submission_path} && ./start_rogue.sh")
+        _, stdout, std_err = self.ssh_client.exec_command(f"cd {self.guest_submission_path} && bash ./start_rogue.sh")
         return_code = stdout.channel.recv_exit_status()
         if return_code != 0:
             return Result(False, std_err.read().decode())
@@ -139,12 +142,12 @@ class BGPHVirtualMachine:
     def stop_rogue(self):
         if not self.ssh_client:
             return Result(False, "SSH client not initialized")
-        self.ssh_client.exec_command(f"cd {self.guest_submission_path} && ./stop_rogue.sh")
+        self.ssh_client.exec_command(f"cd {self.guest_submission_path} && bash ./stop_rogue.sh")
         return Result(True)
 
     def check_website(self, shell) -> str:
-        self.send_cmd(shell, f"cd {self.guest_submission_path} && ./website.sh\n", 10)
-        self.send_cmd(shell, f"chr(3)\n") # ctrl+c
+        self.send_cmd(shell, f"cd {self.guest_submission_path} && bash ./website.sh\n", 10)
+        self.send_cmd(shell, f"{chr(3)}\n") # ctrl+c
         output = shell.recv(4096).decode()
         return output
 
