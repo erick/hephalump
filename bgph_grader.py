@@ -72,6 +72,7 @@ class BGPHGrader:
         output = self.vm.check_website(shell)
         if "Default" not in output:
             test.add_error(-40, "Can't reach the default website, -40 Points")
+            test.add_feedback(f"Output: {output}")
             success = False
 
         test.set_passed(success)
@@ -101,6 +102,7 @@ class BGPHGrader:
         output = self.vm.check_website(shell)
         if "Default" not in output:
             test.add_error(-5, "Can't reach the default website after stopping rouge, -5 Points")
+            test.add_feedback(f"Output: {output}")
             success = False
 
         test.set_passed(success)
