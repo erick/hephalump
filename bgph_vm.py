@@ -134,21 +134,26 @@ class BGPHVirtualMachine:
         print("Starting rogue server")
         if not self.ssh_client:
             return Result(False, "SSH client not initialized")
-        _, stdout, std_err = self.ssh_client.exec_command(f"cd {self.guest_submission_path} && bash ./start_rogue.sh")
-        print(f"stdout: {stdout.read().decode()}")
-        return_code = stdout.channel.recv_exit_status()
+        _, std_out, std_err = self.ssh_client.exec_command(f"cd {self.guest_submission_path} && bash ./start_rogue.sh")
+        print(f"stdout: {std_out.read().decode()}")
+        return_code = std_out.channel.recv_exit_status()
         if return_code != 0:
             return Result(False, std_err.read().decode())
-        time.sleep(3)
+        time.sleep(5)
         return Result(True)
 
     def stop_rogue(self):
         print("Stopping rogue server")
         if not self.ssh_client:
             return Result(False, "SSH client not initialized")
-        _, stdout, stderr = self.ssh_client.exec_command(f"cd {self.guest_submission_path} && bash ./stop_rogue.sh")
-        print(f"stdout: {stdout.read().decode()}")
-        time.sleep(3)
+        _, std_out, std_err = self.ssh_client.exec_command(f"cd {self.guest_submission_path} && bash ./stop_rogue.sh")
+        print(f"std_out: {std_out.read().decode()}")
+
+        return_code = std_out.channel.recv_exit_status()
+        if return_code != 0:
+            return Result(False, std_err.read().decode())
+
+        time.sleep(5)
         return Result(True)
 
     def check_website(self, shell) -> str:
