@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# cd to the directory of the script
+cd "/autograder/source"
+python3 bgph_grader.py
