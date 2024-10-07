@@ -7,7 +7,7 @@ import time
 
 class BGPHGrader:
     def __init__(self, vm: BGPHVirtualMachine) -> None:
-        self.submission_path = Path("/autograder/submission")
+        self.submission_path = Path("/autograder/submission/BGPHijacking")
         self.vm = vm
         ssh_client = self.vm.init()
         if not ssh_client:
@@ -71,9 +71,10 @@ class BGPHGrader:
         shell = self.ssh_client.invoke_shell()
         output = self.vm.check_website(shell)
         print(f"Output: {output}")
+        test.add_feedback(f"Output: {output}")
+
         if "Default" not in output:
             test.add_error(-40, "Can't reach the default website, -40 Points")
-            test.add_feedback(f"Output: {output}")
             success = False
 
         test.set_passed(success)
@@ -87,9 +88,10 @@ class BGPHGrader:
         shell = self.ssh_client.invoke_shell()
         output = self.vm.check_website(shell)
         print(f"Output: {output}")
+        test.add_feedback(f"Output: {output}")
+
         if "Attacker" not in output:
             test.add_error(-40, "Can't reach attacker website, BGP Hijacking failed, -40 Points")
-            test.add_feedback(f"Output: {output}")
             success = False
 
         test.set_passed(success)
@@ -102,10 +104,11 @@ class BGPHGrader:
 
         shell = self.ssh_client.invoke_shell()
         output = self.vm.check_website(shell)
+        test.add_feedback(f"Output: {output}")
         print(f"Output: {output}")
+
         if "Default" not in output:
             test.add_error(-5, "Can't reach the default website after stopping rouge, -5 Points")
-            test.add_feedback(f"Output: {output}")
             success = False
 
         test.set_passed(success)

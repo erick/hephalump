@@ -11,7 +11,7 @@ class BGPHVirtualMachine:
         self.port = self.SSH_PORT_FORWARDING
         self.username = "mininet"
         self.password = "mininet"
-        self.guest_submission_path = "/autograder/submission"
+        self.guest_submission_path = "/autograder/submission/BGPHijacking"
 
         self.ssh_client = None
 
