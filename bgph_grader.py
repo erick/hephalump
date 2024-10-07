@@ -7,7 +7,7 @@ import time
 
 class BGPHGrader:
     def __init__(self, vm: BGPHVirtualMachine) -> None:
-        self.submission_path = Path("/autograder/submission/BGPHijacking")
+        self.BGPH_path = Path("/autograder/submission/BGPHijacking")
         self.vm = vm
         ssh_client = self.vm.init()
         if not ssh_client:
@@ -40,23 +40,23 @@ class BGPHGrader:
 
         # check each file exists
         for file in required_files:
-            if not (self.submission_path / file).exists():
+            if not (self.BGPH_path / file).exists():
                 success = False
                 test.add_error(-test.max_score, f"Missing required file: {file}, invalid submission")
                 return success
 
         # check each config exists
         for file in required_configs:
-            if not (self.submission_path / file).exists():
+            if not (self.BGPH_path / file).exists():
                 success = False
                 test.add_error(-test.max_score, f"Missing required file: {file}, invalid submission")
                 return success
 
         # check the configuration files
-        if not all_unique(self.submission_path, "conf/bgpd-*.conf"):
+        if not all_unique(self.BGPH_path, "conf/bgpd-*.conf"):
             test.add_error(-2, "One or more bgpd conf files are similar, -2 Points")
             success = False
-        if not all_unique(self.submission_path, "conf/zebra-*.conf"):
+        if not all_unique(self.BGPH_path, "conf/zebra-*.conf"):
             test.add_error(-2, "One or more zebra conf files are similar, -2 Points")
             success = False
 

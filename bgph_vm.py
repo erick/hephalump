@@ -11,7 +11,8 @@ class BGPHVirtualMachine:
         self.port = self.SSH_PORT_FORWARDING
         self.username = "mininet"
         self.password = "mininet"
-        self.guest_submission_path = "/autograder/submission/BGPHijacking"
+        self.guest_submission_path = "/autograder/submission/"
+        self.BGPH_path = "/autograder/submission/BGPHijacking"
 
         self.ssh_client = None
 
@@ -97,9 +98,9 @@ class BGPHVirtualMachine:
 
         # setup permissions
         time.sleep(1)
-        self.ssh_client.exec_command(f"cd {self.guest_submission_path} && chmod +x *.sh")
-        _, stdout, std_err = self.ssh_client.exec_command(f"ls -al {self.guest_submission_path}")
-        print(f"Files in {self.guest_submission_path}: {stdout.read().decode()}")
+        self.ssh_client.exec_command(f"cd {self.BGPH_path} && chmod +x *.sh")
+        _, stdout, std_err = self.ssh_client.exec_command(f"ls -al {self.BGPH_path}")
+        print(f"Files in {self.BGPH_path}: {stdout.read().decode()}")
         return self.ssh_client
 
     def send_cmd(self, shell, cmd: str, sleep_sec=2):
@@ -108,7 +109,7 @@ class BGPHVirtualMachine:
 
     def start_topology(self, shell) -> Result:
         print("Starting topology")
-        self.send_cmd(shell, f"cd {self.guest_submission_path} && sudo python3 bgp.py\n", 30)
+        self.send_cmd(shell, f"cd {self.BGPH_path} && sudo python3 bgp.py\n", 30)
         output = ""
         output += shell.recv(2048).decode()
 
@@ -134,7 +135,7 @@ class BGPHVirtualMachine:
         print("Starting rogue server")
         if not self.ssh_client:
             return Result(False, "SSH client not initialized")
-        _, std_out, std_err = self.ssh_client.exec_command(f"cd {self.guest_submission_path} && bash ./start_rogue.sh")
+        _, std_out, std_err = self.ssh_client.exec_command(f"cd {self.BGPH_path} && bash ./start_rogue.sh")
         return_code = std_out.channel.recv_exit_status()
         if return_code != 0:
             return Result(False, std_err.read().decode())
@@ -145,7 +146,7 @@ class BGPHVirtualMachine:
         print("Stopping rogue server")
         if not self.ssh_client:
             return Result(False, "SSH client not initialized")
-        _, std_out, std_err = self.ssh_client.exec_command(f"cd {self.guest_submission_path} && bash ./stop_rogue.sh")
+        _, std_out, std_err = self.ssh_client.exec_command(f"cd {self.BGPH_path} && bash ./stop_rogue.sh")
 
         return_code = std_out.channel.recv_exit_status()
         if return_code != 0:
@@ -155,7 +156,7 @@ class BGPHVirtualMachine:
         return Result(True)
 
     def check_website(self, shell) -> str:
-        self.send_cmd(shell, f"cd {self.guest_submission_path} && bash ./website.sh\n", 10)
+        self.send_cmd(shell, f"cd {self.BGPH_path} && bash ./website.sh\n", 10)
         self.send_cmd(shell, f"{chr(3)}\n") # ctrl+c
         output = shell.recv(4096).decode()
         return output
