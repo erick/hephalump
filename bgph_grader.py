@@ -13,7 +13,7 @@ class BGPHGrader:
     def __init__(self, vm: BGPHVirtualMachine) -> None:
         self.script_path = Path(__file__).parent
         self.BGPH_path = Path("/autograder/submission/BGPHijacking")
-        self.anti_cheating_secret = "DONTHARDCODE5566"
+        self.anti_cheating_secret = hashlib.sha256(f"CS6250{time.time()}666".encode()).hexdigest()
 
         self.vm = vm
         ssh_client = self.vm.init()
@@ -273,7 +273,7 @@ class BGPHGrader:
 
         self._copy_scripts_to_submission()
         shell = self.ssh_client.invoke_shell()
-        self.vm.write_file(shell, "/tmp/anti_cheating_hash5566.txt", self.anti_cheating_secret)
+        self.vm.write_file(shell, "/tmp/anti_cheating_secret5566.txt", self.anti_cheating_secret)
 
         result = self.vm.start_topology(self.topology_interactive_shell)
         if not result.success:

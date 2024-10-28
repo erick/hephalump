@@ -12,7 +12,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--text', default="Default web server")
 FLAGS = parser.parse_args()
 
-anti_cheating_secret = "DONTHARDCODE5566"
+with open("/tmp/anti_cheating_secret5566.txt", "r") as f:
+    anti_cheating_secret = f.read().strip()
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     # Disable logging DNS lookups
