@@ -7,12 +7,13 @@ import time
 import random
 import re
 import hashlib
+import shutil
 
 class BGPHGrader:
     def __init__(self, vm: BGPHVirtualMachine) -> None:
         self.script_path = Path(__file__).parent
         self.BGPH_path = Path("/autograder/submission/BGPHijacking")
-        self.anti_cheating_hash = hashlib.sha256("cs6250{}".format(time.time()).encode()).hexdigest()
+        self.anti_cheating_secret = "DONTHARDCODE5566"
 
         self.vm = vm
         ssh_client = self.vm.init()
@@ -38,10 +39,7 @@ class BGPHGrader:
         # copy scripts to submission folder
         scripts = ["scripts/webserver.py", "scripts/start_rogue_hard.sh"]
         for script in scripts:
-            src = self.script_path / script
-            dst = self.BGPH_path / script
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            dst.write_text(src.read_text())
+            shutil.copy(self.script_path / script, self.BGPH_path)
 
     def _test_report(self):
         test = self.tests["report"]

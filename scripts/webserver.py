@@ -12,10 +12,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--text', default="Default web server")
 FLAGS = parser.parse_args()
 
-# generate a sha256 hash of current time
-anti_cheating_hash = ""
-with open("/tmp/anti_cheating_hash5566.txt", "r") as f:
-    anti_cheating_hash = f.read().strip()
+anti_cheating_secret = "DONTHARDCODE5566"
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     # Disable logging DNS lookups
@@ -26,7 +23,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-type", "text/html")
         self.end_headers()
-        self.wfile.write("<h1>{} ({})</h1>\n".format(FLAGS.text, anti_cheating_hash).encode('UTF-8'))
+        self.wfile.write("<h1>{} ({})</h1>\n".format(FLAGS.text, anti_cheating_secret).encode('UTF-8'))
         self.wfile.flush()
 
 PORT = 80
