@@ -25,9 +25,9 @@ class BGPHGrader:
             "sanity": Test("Sanity and configuration test", max_score=10),
             "topology": Test("Topology, links, connectivity, BGP", max_score=30),
             "default_website": Test("Default website test", max_score=40),
-            "rouge_website": Test("Rouge website test (AS5 only)", max_score=40),
+            "rouge_website": Test("Rouge website test (easy)", max_score=40),
             "default_website_after": Test("Default website after rouge", max_score=5),
-            "rouge_hard": Test("Rouge website test (Whole topology)", max_score=20),
+            "rouge_hard": Test("Rouge website test (hard)", max_score=20),
         }
 
     def _test_report(self):
@@ -41,7 +41,7 @@ class BGPHGrader:
                 success = False
 
         test.set_passed(success)
-        test.add_feedback("Please use legible configuration values! We might manually deduct points of this part if it’s not legible")
+        test.add_feedback("Please use legible configuration values. We might still manually deduct points of this part if it's not legible")
         return success
 
     def _test_sanity(self):
@@ -117,14 +117,14 @@ class BGPHGrader:
         random_router = random.choice(available_routers)
         shell = self.ssh_client.invoke_shell()
         bgp_messages = self.vm.bgp_messages(shell, random_router)
-        test.add_feedback(f"Checking BGP messages on {random_router}")
+        test.add_feedback(f"Randonly checking BGP messages on {random_router}")
         expected_bgp_prefixes = ["11.0.0.0", "12.0.0.0", "13.0.0.0", "14.0.0.0", "15.0.0.0"]
         for prefix in expected_bgp_prefixes:
             if prefix not in bgp_messages:
                 test.add_error(-5, f"Missing prefix: {prefix}, please check connectivity between routers and BGP configuration, -5 points")
-                test.add_feedback(f"BGP messages: {bgp_messages}")
                 success = False
 
+        test.add_feedback(f"BGP messages: {bgp_messages}")
         test.set_passed(success)
         return success
 
