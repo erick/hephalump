@@ -172,3 +172,10 @@ class BGPHVirtualMachine:
         output = shell.recv(4096).decode()
         return output
 
+    def bgp_messages(self, shell, router="R3") -> str:
+        self.send_cmd(shell, f"cd {self.BGPH_path} && bash ./connect.sh {router}\n", 5)
+        self.send_cmd(shell, f"en\n", 3) # password
+        self.send_cmd(shell, f"sh ip bgp\n", 3) # password
+        output = shell.recv(4096).decode()
+        return output
+

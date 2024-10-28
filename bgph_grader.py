@@ -22,8 +22,8 @@ class BGPHGrader:
 
         self.tests = {
             "report": Test("Report", max_score=5),
-            "sanity": Test("Sanity Test", max_score=20),
-            "topology": Test("Topology and Connectivity", max_score=20),
+            "sanity": Test("Sanity and configuration test", max_score=10),
+            "topology": Test("Topology, links, connectivity, BGP", max_score=30),
             "default_website": Test("Default website test", max_score=40),
             "rouge_website": Test("Rouge website test (AS5 only)", max_score=40),
             "default_website_after": Test("Default website after rouge", max_score=5),
@@ -84,6 +84,7 @@ class BGPHGrader:
         test.set_to_max_score()
         success = True
 
+        # test switches
         log = self.vm.get_topology_start_output()
         matched_switches = re.findall(r"\*\*\* Adding switches:.*\n(.*?)\n", log)
         switches = set(matched_switches[0].split())
@@ -93,6 +94,7 @@ class BGPHGrader:
             test.add_error(-5, f"Missing essential switches: {diff}")
             success = False
 
+        # test links
         matched_links = re.findall(r"\*\*\* Adding links:.*\n(.*?)\n", log)
         link_pairs = re.findall(r"\((.*?), (.*?)\)", matched_links[0])
         link_pairs = set([frozenset(pair) for pair in link_pairs])
@@ -109,6 +111,18 @@ class BGPHGrader:
                 msg += f"{tuple(pair)}, "
             test.add_error(-5, msg)
             success = False
+
+        available_routers = ["R1", "R2", "R3", "R4", "R5"]
+        random_router = random.choice(available_routers)
+        shell = self.ssh_client.invoke_shell()
+        bgp_messages = self.vm.bgp_messages(shell, random_router)
+        test.add_feedback(f"Checking BGP messages on {random_router}")
+        expected_bgp_prefixes = ["11.0.0.0", "12.0.0.0", "13.0.0.0", "14.0.0.0", "15.0.0.0"]
+        for prefix in expected_bgp_prefixes:
+            if prefix not in bgp_messages:
+                test.add_error(-5, f"Missing prefix: {prefix}, please check connectivity between routers and BGP configuration")
+                test.add_feedback(f"BGP messages: {bgp_messages}")
+                success = False
 
         test.set_passed(success)
         return success
@@ -233,7 +247,7 @@ class BGPHGrader:
         print("Testing topology")
         success = self._test_topology()
         if not success:
-            self.tests["topology"].add_feedback("Topology or connectivity test failed, subsequent tests skipped")
+            self.tests["topology"].add_feedback("Topology or link test failed, subsequent tests skipped")
             return
 
         # test default website
