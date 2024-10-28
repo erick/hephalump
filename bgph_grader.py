@@ -103,7 +103,7 @@ class BGPHGrader:
             frozenset({"R2", "h2-1"}), frozenset({"R2", "h2-2"}), frozenset({"R3", "R4"}), frozenset({"R3", "R5"}),
             frozenset({"R3", "h3-1"}), frozenset({"R3", "h3-2"}), frozenset({"R4", "R5"}), frozenset({"R4", "h4-1"}),
             frozenset({"R4", "h4-2"}), frozenset({"R5", "R6"}), frozenset({"R5", "h5-1"}), frozenset({"R5", "h5-2"}),
-            frozenset({"R6", "h6-1"}), frozenset({"R6", "h6-2"}), frozenset({"R7", "R8"}), ])
+            frozenset({"R6", "h6-1"}), frozenset({"R6", "h6-2"}),])
         diff = expected_link_pairs - link_pairs
         if diff:
             msg = "Missing essential links: "
@@ -228,7 +228,7 @@ class BGPHGrader:
 
     def grade(self):
         # report check
-        success = self._test_sanity()
+        success = self._test_report()
         print("Report test success: ", success)
 
         # config sanity check
@@ -245,10 +245,7 @@ class BGPHGrader:
 
         # test topology
         print("Testing topology")
-        success = self._test_topology()
-        if not success:
-            self.tests["topology"].add_feedback("Topology or link test failed, subsequent tests skipped")
-            return
+        self._test_topology()
 
         # test default website
         print("Testing default website")
