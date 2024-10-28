@@ -13,7 +13,7 @@ class BGPHGrader:
     def __init__(self, vm: BGPHVirtualMachine) -> None:
         self.script_path = Path(__file__).parent
         self.BGPH_path = Path("/autograder/submission/BGPHijacking")
-        self.anti_cheating_secret = hashlib.sha256(f"CS6250{time.time()}666".encode()).hexdigest()
+        self.anti_cheating_secret = hashlib.sha256(f"CS6250{time.time()}666".encode()).hexdigest()[0:16]
 
         self.vm = vm
         ssh_client = self.vm.init()
@@ -35,6 +35,8 @@ class BGPHGrader:
             "rouge_hard": Test("Rouge website test (hard)", max_score=20),
         }
 
+        self.anti_hardcode_msg = "Anti-hardcode secret mismatch, don't hardcode the result or edit webserver.py"
+
     def _copy_scripts_to_submission(self):
         # copy scripts to submission folder
         scripts = ["scripts/webserver.py", "scripts/start_rogue_hard.sh"]
@@ -52,7 +54,7 @@ class BGPHGrader:
                 success = False
 
         test.set_passed(success)
-        test.add_feedback("Please use legible configuration values. We might still manually deduct points of this part if it's not legible")
+        test.add_feedback("Report detected! Please note that we might still manually deduct points of this part if it's not legible")
         return success
 
     def _test_sanity(self):
@@ -96,6 +98,7 @@ class BGPHGrader:
         success = True
 
         # test switches
+        test.add_feedback("Checking required switches present")
         log = self.vm.get_topology_start_output()
         matched_switches = re.findall(r"\*\*\* Adding switches:.*\n(.*?)\n", log)
         switches = set(matched_switches[0].split())
@@ -106,6 +109,7 @@ class BGPHGrader:
             success = False
 
         # test links
+        test.add_feedback("Checking required links present")
         matched_links = re.findall(r"\*\*\* Adding links:.*\n(.*?)\n", log)
         link_pairs = re.findall(r"\((.*?), (.*?)\)", matched_links[0])
         link_pairs = set([frozenset(pair) for pair in link_pairs])
@@ -128,14 +132,14 @@ class BGPHGrader:
         random_router = random.choice(available_routers)
         shell = self.ssh_client.invoke_shell()
         bgp_messages = self.vm.bgp_messages(shell, random_router)
-        test.add_feedback(f"Randonly checking BGP messages on {random_router}")
+        test.add_feedback(f"Randonly checking BGP messages on {random_router}\n")
         expected_bgp_prefixes = ["11.0.0.0", "12.0.0.0", "13.0.0.0", "14.0.0.0", "15.0.0.0"]
         for prefix in expected_bgp_prefixes:
             if prefix not in bgp_messages:
                 test.add_error(-5, f"Missing prefix: {prefix}, please check connectivity between routers and BGP configuration, -5 points")
                 success = False
 
-        test.add_feedback(f"BGP messages: {bgp_messages}")
+        test.add_feedback(f"BGP messages for reference: \n{bgp_messages}")
         test.set_passed(success)
         return success
 
@@ -146,20 +150,22 @@ class BGPHGrader:
 
         all_hosts = ["h2-1", "h3-1", "h4-1", "h5-1"]
         selected_host = random.sample(all_hosts, 2)
-        test.add_feedback(f"Checking on 2 randomly selected hosts: {selected_host}")
+        test.add_feedback(f"Checking on 2 randomly selected hosts: {selected_host}\n")
 
         for host in selected_host:
             shell = self.ssh_client.invoke_shell()
             output = self.vm.check_website(shell, host)
-            test.add_feedback(f"Output: {output}")
+            print(f"Test Default website on {host}: \n{output}")
 
             if self.anti_cheating_secret not in output:
-                test.add_error(-test.max_score, f"Missing anti-hardcode hash, don't hardcode the result or change the webserver.py")
+                test.add_error(-test.max_score, self.anti_hardcode_msg)
+                test.add_feedback(f"{host} output for reference: \n{output}")
                 success = False
                 break
 
             if "Default" not in output:
-                test.add_error(-10, f"Can't reach the default website on host {host}, -10 Points")
+                test.add_error(-10, f"Can't reach the default website on host {host}, -10 Points\n")
+                test.add_feedback(f"{host} output for reference: \n{output}")
                 success = False
 
         test.set_passed(success)
@@ -172,29 +178,32 @@ class BGPHGrader:
         success = True
         shell = self.ssh_client.invoke_shell()
         output = self.vm.check_website(shell, "h5-1")
-        print(f"Output: {output}")
-        test.add_feedback(f"Output: {output}")
+        print(f"Test rouge output on h5-1: {output}")
 
         if self.anti_cheating_secret not in output:
-            test.add_error(-test.max_score, f"Missing anti-hardcode hash, don't hardcode the result or change the webserver.py")
+            test.add_error(-test.max_score, self.anti_hardcode_msg)
+            test.add_feedback(f"output for reference: \n{output}")
             success = False
 
         # Check if the attacker website is reachable on h5-1
-        if "Attacker" not in output:
+        elif "Attacker" not in output:
             test.add_error(-40, "Can't reach attacker website on h5-1, BGP Hijacking failed, -40 Points")
+            test.add_feedback(f"output for reference: \n{output}")
             success = False
 
         # Check if the default website is reachable on h2-1
         shell = self.ssh_client.invoke_shell()
         output = self.vm.check_website(shell, "h2-1")
-        test.add_feedback(f"Output: {output}")
+        print(f"Test rouge output on h2-1: {output}")
 
         if self.anti_cheating_secret not in output:
-            test.add_error(-test.max_score, f"Missing anti-hardcode hash, don't hardcode the result or change the webserver.py")
+            test.add_error(-test.max_score, self.anti_hardcode_msg)
+            test.add_feedback(f"output for reference: \n{output}")
             success = False
 
-        if "Default" not in output:
+        elif "Default" not in output:
             test.add_error(-40, "Can't reach default website on h2-1, BGP Hijacking failed, -40 Points")
+            test.add_feedback(f"output for reference: \n{output}")
             success = False
 
         test.set_passed(success)
@@ -207,11 +216,11 @@ class BGPHGrader:
 
         shell = self.ssh_client.invoke_shell()
         output = self.vm.check_website(shell, "h5-1")
-        test.add_feedback(f"Output: {output}")
-        print(f"Output: {output}")
+        print(f"Test default after rouge: {output}")
 
         if "Default" not in output:
             test.add_error(-5, "Can't reach the default website after stopping rouge, -5 Points")
+            test.add_feedback(f"output for reference: \n{output}")
             success = False
 
         test.set_passed(success)
@@ -224,36 +233,38 @@ class BGPHGrader:
 
         all_hosts = ["h2-1", "h3-1", "h4-1", "h5-1"]
         selected_host = random.sample(all_hosts, 2)
-        test.add_feedback(f"Checking on randomly selected hosts: {selected_host}")
+        test.add_feedback(f"Checking on randomly selected hosts: {selected_host}\n")
 
         for host in selected_host:
             shell = self.ssh_client.invoke_shell()
             output = self.vm.check_website(shell, host)
-            print(f"Output: {output}")
-            test.add_feedback(f"Output: {output}")
+            print(f"Test rouge hard on {host}: {output}")
 
             if self.anti_cheating_secret not in output:
-                test.add_error(-test.max_score, f"Missing anti-hardcode hash, don't hardcode the result or change the webserver.py")
+                test.add_error(-test.max_score, self.anti_hardcode_msg)
+                test.add_feedback(f"output for reference: \n{output}")
                 success = False
                 break
 
             # Check if the attacker website is reachable on h5-1
-            if "Attacker" not in output:
-                test.add_error(-20, f"Can't reach attacker website on {host}, BGP Hijacking failed, -20 Points")
+            elif "Attacker" not in output:
+                test.add_error(-test.max_score, f"Can't reach attacker website on {host}, BGP Hijacking failed, -20 Points")
                 success = False
                 break
 
         # Check if the default website is reachable on h1-1
         shell = self.ssh_client.invoke_shell()
         output = self.vm.check_website(shell, "h1-1")
-        print(f"Output: {output}")
-        test.add_feedback(f"Output: {output}")
+        print(f"Test rouge hard on h1-1 (should be  default): {output}")
+
         if self.anti_cheating_secret not in output:
-            test.add_error(-test.max_score, f"Missing anti-hardcode hash, don't hardcode the result or change the webserver.py")
+            test.add_error(-test.max_score, self.anti_hardcode_msg)
+            test.add_feedback(f"output for reference: \n{output}")
             success = False
 
-        if "Default" not in output:
+        elif "Default" not in output:
             test.add_error(-20, "Can't reach default website on h1-1, BGP Hijacking failed, -20 Points")
+            test.add_feedback(f"output for reference: \n{output}")
             success = False
 
         test.set_passed(success)
