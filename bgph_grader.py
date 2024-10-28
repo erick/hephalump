@@ -153,7 +153,7 @@ class BGPHGrader:
             output = self.vm.check_website(shell, host)
             test.add_feedback(f"Output: {output}")
 
-            if self.anti_cheating_hash not in output:
+            if self.anti_cheating_secret not in output:
                 test.add_error(-test.max_score, f"Missing anti-hardcode hash, don't hardcode the result or change the webserver.py")
                 success = False
                 break
@@ -175,7 +175,7 @@ class BGPHGrader:
         print(f"Output: {output}")
         test.add_feedback(f"Output: {output}")
 
-        if self.anti_cheating_hash not in output:
+        if self.anti_cheating_secret not in output:
             test.add_error(-test.max_score, f"Missing anti-hardcode hash, don't hardcode the result or change the webserver.py")
             success = False
 
@@ -189,7 +189,7 @@ class BGPHGrader:
         output = self.vm.check_website(shell, "h2-1")
         test.add_feedback(f"Output: {output}")
 
-        if self.anti_cheating_hash not in output:
+        if self.anti_cheating_secret not in output:
             test.add_error(-test.max_score, f"Missing anti-hardcode hash, don't hardcode the result or change the webserver.py")
             success = False
 
@@ -232,7 +232,7 @@ class BGPHGrader:
             print(f"Output: {output}")
             test.add_feedback(f"Output: {output}")
 
-            if self.anti_cheating_hash not in output:
+            if self.anti_cheating_secret not in output:
                 test.add_error(-test.max_score, f"Missing anti-hardcode hash, don't hardcode the result or change the webserver.py")
                 success = False
                 break
@@ -248,7 +248,7 @@ class BGPHGrader:
         output = self.vm.check_website(shell, "h1-1")
         print(f"Output: {output}")
         test.add_feedback(f"Output: {output}")
-        if self.anti_cheating_hash not in output:
+        if self.anti_cheating_secret not in output:
             test.add_error(-test.max_score, f"Missing anti-hardcode hash, don't hardcode the result or change the webserver.py")
             success = False
 
@@ -273,7 +273,7 @@ class BGPHGrader:
 
         self._copy_scripts_to_submission()
         shell = self.ssh_client.invoke_shell()
-        self.vm.write_file(shell, "/tmp/anti_cheating_hash5566.txt", self.anti_cheating_hash)
+        self.vm.write_file(shell, "/tmp/anti_cheating_hash5566.txt", self.anti_cheating_secret)
 
         result = self.vm.start_topology(self.topology_interactive_shell)
         if not result.success:
