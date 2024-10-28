@@ -268,6 +268,8 @@ class BGPHGrader:
 
     def generate_results(self, result: Result):
         for test in self.tests.values():
+            if test.score < 0:
+                test.score = 0
             result.add_test(test)
 
 
