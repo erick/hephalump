@@ -249,6 +249,7 @@ class BGPHGrader:
             # Check if the attacker website is reachable on h5-1
             elif "Attacker" not in output:
                 test.add_error(-test.max_score, f"Can't reach attacker website on {host}, BGP Hijacking failed, -20 Points")
+                test.add_feedback(f"output for reference: \n{output}")
                 success = False
                 break
 
