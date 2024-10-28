@@ -37,7 +37,7 @@ class BGPHGrader:
         required_files = ["fig2_topo.pdf"]
         for file in required_files:
             if not (self.BGPH_path / file).exists():
-                test.add_feedback(f"Missing report file: {file}")
+                test.add_error(-5, f"Missing report file: {file}, -5 Points")
                 success = False
 
         test.set_passed(success)
