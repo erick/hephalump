@@ -58,22 +58,19 @@ class BGPHGrader:
         for file in required_files:
             if not (self.BGPH_path / file).exists():
                 success = False
-                test.add_error(-test.max_score, f"Missing required file: {file}, invalid submission")
+                test.add_error(-test.max_score, f"Missing required file: {file}, please check your folder structure")
                 return success
 
         # check each config exists
         for file in required_configs:
             if not (self.BGPH_path / file).exists():
                 success = False
-                test.add_error(-test.max_score, f"Missing required file: {file}, invalid submission")
+                test.add_error(-test.max_score, f"Missing required file: {file}, please check your folder structure")
                 return success
 
         # check the configuration files
         if not all_unique(self.BGPH_path, "conf/bgpd-*.conf"):
-            test.add_error(-5, "One or more bgpd conf files are similar, -5 Points")
-            success = False
-        if not all_unique(self.BGPH_path, "conf/zebra-*.conf"):
-            test.add_error(-5, "One or more zebra conf files are similar, -5 Points")
+            test.add_error(-5, "Two or more bgpd conf files are identical, -5 Points")
             success = False
 
         test.set_passed(success)
