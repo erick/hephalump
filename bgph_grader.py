@@ -150,7 +150,7 @@ class BGPHGrader:
 
         all_hosts = ["h2-1", "h3-1", "h4-1", "h5-1"]
         selected_host = random.sample(all_hosts, 2)
-        test.add_feedback(f"Checking on 2 randomly selected hosts: {selected_host}\n")
+        test.add_feedback(f"Checking on randomly selected hosts: {selected_host}\n")
 
         for host in selected_host:
             shell = self.ssh_client.invoke_shell()
@@ -179,6 +179,7 @@ class BGPHGrader:
         shell = self.ssh_client.invoke_shell()
         output = self.vm.check_website(shell, "h5-1")
         print(f"Test rouge output on h5-1: {output}")
+        test.add_feedback("Checking hijack on host: h5-1\n")
 
         if self.anti_cheating_secret not in output:
             test.add_error(-test.max_score, self.anti_hardcode_msg)
@@ -192,9 +193,12 @@ class BGPHGrader:
             success = False
 
         # Check if the default website is reachable on h2-1
+        all_hosts = ["h2-1", "h3-1"]
+        host = random.choice(all_hosts)
         shell = self.ssh_client.invoke_shell()
-        output = self.vm.check_website(shell, "h2-1")
-        print(f"Test rouge output on h2-1: {output}")
+        output = self.vm.check_website(shell, host)
+        print(f"Test rouge output on {host}: {output}")
+        test.add_feedback(f"Checking default on host: {host}\n")
 
         if self.anti_cheating_secret not in output:
             test.add_error(-test.max_score, self.anti_hardcode_msg)
@@ -202,7 +206,7 @@ class BGPHGrader:
             success = False
 
         elif "Default" not in output:
-            test.add_error(-40, "Can't reach default website on h2-1, BGP Hijacking failed, -40 Points")
+            test.add_error(-40, f"Can't reach default website on {host}, BGP Hijacking failed, -40 Points")
             test.add_feedback(f"output for reference: \n{output}")
             success = False
 
