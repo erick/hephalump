@@ -195,6 +195,13 @@ class BGPHGrader:
             self.tests["default_website"].add_feedback(result.message)
             return
 
+        # test topology
+        print("Testing topology")
+        success = self._test_topology()
+        if not success:
+            self.tests["topology"].add_feedback("Topology test failed, subsequent tests skipped")
+            return
+
         # test default website
         print("Testing default website")
         self._test_default_website()
