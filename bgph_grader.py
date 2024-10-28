@@ -91,7 +91,7 @@ class BGPHGrader:
         expected_switches = set(["R1", "R2", "R3", "R4", "R5", "R6"])
         diff = expected_switches - switches
         if diff:
-            test.add_error(-5, f"Missing essential switches: {diff}")
+            test.add_error(-5, f"Missing essential switches: {diff}, -5 Points")
             success = False
 
         # test links
@@ -109,6 +109,7 @@ class BGPHGrader:
             msg = "Missing essential links: "
             for pair in diff:
                 msg += f"{tuple(pair)}, "
+            msg += ", -5 Points"
             test.add_error(-5, msg)
             success = False
 
@@ -120,7 +121,7 @@ class BGPHGrader:
         expected_bgp_prefixes = ["11.0.0.0", "12.0.0.0", "13.0.0.0", "14.0.0.0", "15.0.0.0"]
         for prefix in expected_bgp_prefixes:
             if prefix not in bgp_messages:
-                test.add_error(-5, f"Missing prefix: {prefix}, please check connectivity between routers and BGP configuration")
+                test.add_error(-5, f"Missing prefix: {prefix}, please check connectivity between routers and BGP configuration, -5 points")
                 test.add_feedback(f"BGP messages: {bgp_messages}")
                 success = False
 
@@ -142,9 +143,8 @@ class BGPHGrader:
             test.add_feedback(f"Output: {output}")
 
             if "Default" not in output:
-                test.add_error(-20, f"Can't reach the default website on host {host}, -20 Points")
+                test.add_error(-10, f"Can't reach the default website on host {host}, -10 Points")
                 success = False
-                break
 
         test.set_passed(success)
         return success
