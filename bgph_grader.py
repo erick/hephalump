@@ -6,12 +6,13 @@ from pathlib import Path
 import time
 import random
 import re
+import hashlib
 
 class BGPHGrader:
     def __init__(self, vm: BGPHVirtualMachine) -> None:
         self.script_path = Path(__file__).parent
         self.BGPH_path = Path("/autograder/submission/BGPHijacking")
-        self.anti_cheating_hash = ""
+        self.anti_cheating_hash = hashlib.sha256("cs6250{}".format(time.time()).encode()).hexdigest()
 
         self.vm = vm
         ssh_client = self.vm.init()
@@ -41,10 +42,6 @@ class BGPHGrader:
             dst = self.BGPH_path / script
             dst.parent.mkdir(parents=True, exist_ok=True)
             dst.write_text(src.read_text())
-
-    def get_anti_cheating_hash(self):
-        with open("/autograder/submission/anti_cheating_hash.txt", "r") as f:
-            self.anti_cheating_hash = f.read().strip()
 
     def _test_report(self):
         test = self.tests["report"]
@@ -277,6 +274,8 @@ class BGPHGrader:
             return
 
         self._copy_scripts_to_submission()
+        shell = self.ssh_client.invoke_shell()
+        self.vm.write_file(shell, "/tmp/anti_cheating_hash5566.txt", self.anti_cheating_hash)
 
         result = self.vm.start_topology(self.topology_interactive_shell)
         if not result.success:
@@ -286,8 +285,6 @@ class BGPHGrader:
         # test topology
         print("Testing topology")
         self._test_topology()
-
-        self.get_anti_cheating_hash()
 
         # test default website
         print("Testing default website")

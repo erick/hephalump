@@ -130,6 +130,9 @@ class BGPHVirtualMachine:
     def get_topology_start_output(self):
         return self.topology_start_output
 
+    def write_file(self, shell, filename, content):
+        self.send_cmd(shell, f"echo \"{content}\" > {filename}\n")
+
     def stop_topology(self, shell):
         """
         Must use the same shell as start_topology

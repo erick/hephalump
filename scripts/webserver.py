@@ -7,17 +7,15 @@
 import http.server
 import socketserver
 import argparse
-import hashlib
-import time
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--text', default="Default web server")
 FLAGS = parser.parse_args()
 
 # generate a sha256 hash of current time
-anti_cheating_hash = hashlib.sha256("cs6250{}".format(time.time()).encode()).hexdigest()
-with open("/autograder/submission/anti_cheating_hash.txt", "w") as f:
-    f.write(anti_cheating_hash)
+anti_cheating_hash = ""
+with open("/tmp/anti_cheating_hash5566.txt", "r") as f:
+    anti_cheating_hash = f.read().strip()
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     # Disable logging DNS lookups
