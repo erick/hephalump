@@ -9,7 +9,10 @@ import re
 
 class BGPHGrader:
     def __init__(self, vm: BGPHVirtualMachine) -> None:
+        self.script_path = Path(__file__).parent
         self.BGPH_path = Path("/autograder/submission/BGPHijacking")
+        self.anti_cheating_hash = ""
+
         self.vm = vm
         ssh_client = self.vm.init()
         if not ssh_client:
@@ -29,6 +32,19 @@ class BGPHGrader:
             "default_website_after": Test("Default website after rouge", max_score=5),
             "rouge_hard": Test("Rouge website test (hard)", max_score=20),
         }
+
+    def _copy_scripts_to_submission(self):
+        # copy scripts to submission folder
+        scripts = ["scripts/webserver.py", "scripts/start_rogue_hard.sh"]
+        for script in scripts:
+            src = self.script_path / script
+            dst = self.BGPH_path / script
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            dst.write_text(src.read_text())
+
+    def get_anti_cheating_hash(self):
+        with open("/autograder/submission/anti_cheating_hash.txt", "r") as f:
+            self.anti_cheating_hash = f.read().strip()
 
     def _test_report(self):
         test = self.tests["report"]
@@ -142,6 +158,11 @@ class BGPHGrader:
             output = self.vm.check_website(shell, host)
             test.add_feedback(f"Output: {output}")
 
+            if self.anti_cheating_hash not in output:
+                test.add_error(-test.max_score, f"Missing anti-hardcode hash, don't hardcode the result or change the webserver.py")
+                success = False
+                break
+
             if "Default" not in output:
                 test.add_error(-10, f"Can't reach the default website on host {host}, -10 Points")
                 success = False
@@ -159,6 +180,10 @@ class BGPHGrader:
         print(f"Output: {output}")
         test.add_feedback(f"Output: {output}")
 
+        if self.anti_cheating_hash not in output:
+            test.add_error(-test.max_score, f"Missing anti-hardcode hash, don't hardcode the result or change the webserver.py")
+            success = False
+
         # Check if the attacker website is reachable on h5-1
         if "Attacker" not in output:
             test.add_error(-40, "Can't reach attacker website on h5-1, BGP Hijacking failed, -40 Points")
@@ -167,8 +192,12 @@ class BGPHGrader:
         # Check if the default website is reachable on h2-1
         shell = self.ssh_client.invoke_shell()
         output = self.vm.check_website(shell, "h2-1")
-        print(f"Output: {output}")
         test.add_feedback(f"Output: {output}")
+
+        if self.anti_cheating_hash not in output:
+            test.add_error(-test.max_score, f"Missing anti-hardcode hash, don't hardcode the result or change the webserver.py")
+            success = False
+
         if "Default" not in output:
             test.add_error(-40, "Can't reach default website on h2-1, BGP Hijacking failed, -40 Points")
             success = False
@@ -208,6 +237,11 @@ class BGPHGrader:
             print(f"Output: {output}")
             test.add_feedback(f"Output: {output}")
 
+            if self.anti_cheating_hash not in output:
+                test.add_error(-test.max_score, f"Missing anti-hardcode hash, don't hardcode the result or change the webserver.py")
+                success = False
+                break
+
             # Check if the attacker website is reachable on h5-1
             if "Attacker" not in output:
                 test.add_error(-20, f"Can't reach attacker website on {host}, BGP Hijacking failed, -20 Points")
@@ -219,6 +253,10 @@ class BGPHGrader:
         output = self.vm.check_website(shell, "h1-1")
         print(f"Output: {output}")
         test.add_feedback(f"Output: {output}")
+        if self.anti_cheating_hash not in output:
+            test.add_error(-test.max_score, f"Missing anti-hardcode hash, don't hardcode the result or change the webserver.py")
+            success = False
+
         if "Default" not in output:
             test.add_error(-20, "Can't reach default website on h1-1, BGP Hijacking failed, -20 Points")
             success = False
@@ -238,6 +276,8 @@ class BGPHGrader:
             self.tests["sanity"].add_feedback("Sanity test failed, subsequent tests skipped")
             return
 
+        self._copy_scripts_to_submission()
+
         result = self.vm.start_topology(self.topology_interactive_shell)
         if not result.success:
             self.tests["default_website"].add_feedback(result.message)
@@ -246,6 +286,8 @@ class BGPHGrader:
         # test topology
         print("Testing topology")
         self._test_topology()
+
+        self.get_anti_cheating_hash()
 
         # test default website
         print("Testing default website")
