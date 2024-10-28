@@ -13,6 +13,7 @@ class BGPHVirtualMachine:
         self.password = "mininet"
         self.guest_submission_path = "/autograder/submission/"
         self.BGPH_path = "/autograder/submission/BGPHijacking"
+        self.topology_start_output = ""
 
         self.ssh_client = None
 
@@ -123,7 +124,11 @@ class BGPHVirtualMachine:
                 return Result(False, "Topology did not start, please check bgp.py")
 
         print(output)
+        self.topology_start_output = output
         return Result(True)
+
+    def get_topology_start_output(self):
+        return self.topology_start_output
 
     def stop_topology(self, shell):
         """

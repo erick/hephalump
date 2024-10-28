@@ -5,6 +5,7 @@ from utils import all_unique
 from pathlib import Path
 import time
 import random
+import re
 
 class BGPHGrader:
     def __init__(self, vm: BGPHVirtualMachine) -> None:
@@ -83,6 +84,31 @@ class BGPHGrader:
         test.set_to_max_score()
         success = True
 
+        log = self.vm.get_topology_start_output()
+        matched_switches = re.findall(r"\*\*\* Adding switches:.*\n(.*?)\n", log)
+        switches = set(matched_switches[0].split())
+        expected_switches = set(["R1", "R2", "R3", "R4", "R5", "R6"])
+        diff = expected_switches - switches
+        if diff:
+            test.add_error(-5, f"Missing essential switches: {diff}")
+            success = False
+
+        matched_links = re.findall(r"\*\*\* Adding links:.*\n(.*?)\n", log)
+        link_pairs = re.findall(r"\((.*?), (.*?)\)", matched_links[0])
+        link_pairs = set([frozenset(pair) for pair in link_pairs])
+        expected_link_pairs = set([ frozenset({"R1", "R2"}), frozenset({"R1", "R3"}), frozenset({"R1", "h1-1"}),
+            frozenset({"R1", "h1-2"}), frozenset({"R2", "R3"}), frozenset({"R2", "R4"}), frozenset({"R2", "R5"}),
+            frozenset({"R2", "h2-1"}), frozenset({"R2", "h2-2"}), frozenset({"R3", "R4"}), frozenset({"R3", "R5"}),
+            frozenset({"R3", "h3-1"}), frozenset({"R3", "h3-2"}), frozenset({"R4", "R5"}), frozenset({"R4", "h4-1"}),
+            frozenset({"R4", "h4-2"}), frozenset({"R5", "R6"}), frozenset({"R5", "h5-1"}), frozenset({"R5", "h5-2"}),
+            frozenset({"R6", "h6-1"}), frozenset({"R6", "h6-2"}), frozenset({"R7", "R8"}), ])
+        diff = expected_link_pairs - link_pairs
+        if diff:
+            msg = "Missing essential links: "
+            for pair in diff:
+                msg += f"{tuple(pair)}, "
+            test.add_error(-5, msg)
+            success = False
 
         test.set_passed(success)
         return success
@@ -94,7 +120,7 @@ class BGPHGrader:
 
         all_hosts = ["h2-1", "h3-1", "h4-1", "h5-1"]
         selected_host = random.sample(all_hosts, 2)
-        test.add_feedback(f"Checking on randomly selected hosts: {selected_host}")
+        test.add_feedback(f"Checking on 2 randomly selected hosts: {selected_host}")
 
         for host in selected_host:
             shell = self.ssh_client.invoke_shell()
@@ -102,7 +128,7 @@ class BGPHGrader:
             test.add_feedback(f"Output: {output}")
 
             if "Default" not in output:
-                test.add_error(-40, "Can't reach the default website, -40 Points")
+                test.add_error(-20, f"Can't reach the default website on host {host}, -20 Points")
                 success = False
                 break
 
@@ -142,7 +168,7 @@ class BGPHGrader:
         success = True
 
         shell = self.ssh_client.invoke_shell()
-        output = self.vm.check_website(shell)
+        output = self.vm.check_website(shell, "h5-1")
         test.add_feedback(f"Output: {output}")
         print(f"Output: {output}")
 
