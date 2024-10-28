@@ -4,6 +4,7 @@ from results import Result, Test
 from utils import all_unique
 from pathlib import Path
 import time
+import random
 
 class BGPHGrader:
     def __init__(self, vm: BGPHVirtualMachine) -> None:
@@ -35,6 +36,7 @@ class BGPHGrader:
         required_files = ["fig2_topo.pdf"]
         for file in required_files:
             if not (self.BGPH_path / file).exists():
+                test.add_feedback(f"Missing report file: {file}")
                 success = False
 
         test.set_passed(success)
@@ -90,14 +92,19 @@ class BGPHGrader:
         test.set_to_max_score()
         success = True
 
-        shell = self.ssh_client.invoke_shell()
-        output = self.vm.check_website(shell, "h5-1")
-        print(f"Output: {output}")
-        test.add_feedback(f"Output: {output}")
+        all_hosts = ["h2-1", "h3-1", "h4-1", "h5-1"]
+        selected_host = random.sample(all_hosts, 2)
+        test.add_feedback(f"Checking on randomly selected hosts: {selected_host}")
 
-        if "Default" not in output:
-            test.add_error(-40, "Can't reach the default website, -40 Points")
-            success = False
+        for host in selected_host:
+            shell = self.ssh_client.invoke_shell()
+            output = self.vm.check_website(shell, host)
+            test.add_feedback(f"Output: {output}")
+
+            if "Default" not in output:
+                test.add_error(-40, "Can't reach the default website, -40 Points")
+                success = False
+                break
 
         test.set_passed(success)
         return success
@@ -151,7 +158,11 @@ class BGPHGrader:
         test.set_to_max_score()
         success = True
 
-        for host in ["h5-1", "h2-1"]:
+        all_hosts = ["h2-1", "h3-1", "h4-1", "h5-1"]
+        selected_host = random.sample(all_hosts, 2)
+        test.add_feedback(f"Checking on randomly selected hosts: {selected_host}")
+
+        for host in selected_host:
             shell = self.ssh_client.invoke_shell()
             output = self.vm.check_website(shell, host)
             print(f"Output: {output}")
@@ -196,7 +207,7 @@ class BGPHGrader:
         print("Testing topology")
         success = self._test_topology()
         if not success:
-            self.tests["topology"].add_feedback("Topology test failed, subsequent tests skipped")
+            self.tests["topology"].add_feedback("Topology or connectivity test failed, subsequent tests skipped")
             return
 
         # test default website
