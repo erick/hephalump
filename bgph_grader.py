@@ -159,7 +159,7 @@ class BGPHGrader:
 
 
             if "Default" not in output:
-                test.add_error(-10, f"Can't reach the default website on host {host}, -10 Points\n")
+                test.add_error(-20, f"Can't reach the default website on host {host}, -20 Points\n")
                 test.add_feedback(f"{host} output for reference: \n{output}")
                 success = False
             else:
