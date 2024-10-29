@@ -35,7 +35,7 @@ class BGPHGrader:
             "rouge_hard": Test("Rouge website test (hard)", max_score=20),
         }
 
-        self.anti_hardcode_msg = "Anti-hardcode secret mismatch, don't hardcode the result or edit webserver.py"
+        self.anti_hardcode_msg = "Mismatch, please ensure connectivity and topology correctness, and don't modify webserver.py"
 
     def _copy_scripts_to_submission(self):
         # copy scripts to submission folder
