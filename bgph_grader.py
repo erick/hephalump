@@ -54,7 +54,8 @@ class BGPHGrader:
                 success = False
 
         test.set_passed(success)
-        test.add_feedback("Report detected! Please note that we might still manually deduct points of this part if it's not legible")
+        if success:
+            test.add_feedback("Report detected! Please note that we might still manually deduct points of this part if it's not legible")
         return success
 
     def _test_sanity(self):
