@@ -30,9 +30,9 @@ class BGPHGrader:
             "sanity": Test("Sanity and configuration test", max_score=10),
             "topology": Test("Topology, links, connectivity, BGP", max_score=30),
             "default_website": Test("Default website test", max_score=40),
-            "rouge_website": Test("Rouge website test (easy)", max_score=40),
-            "default_website_after": Test("Default website after rouge", max_score=5),
-            "rouge_hard": Test("Rouge website test (hard)", max_score=20),
+            "rouge_website": Test("Rogue website test (easy)", max_score=40),
+            "default_website_after": Test("Default website after rogue", max_score=5),
+            "rouge_hard": Test("Rogue website test (hard)", max_score=20),
         }
 
         self.anti_hardcode_msg = "Mismatch, please ensure connectivity and topology correctness, and don't modify webserver.py"
@@ -180,7 +180,7 @@ class BGPHGrader:
         success = True
         shell = self.ssh_client.invoke_shell()
         output = self.vm.check_website(shell, "h5-1")
-        print(f"Test rouge output on h5-1: {output}")
+        print(f"Test rogue output on h5-1: {output}")
         test.add_feedback("Checking hijack on host: h5-1\n")
 
         # Check if the attacker website is reachable on h5-1
@@ -199,7 +199,7 @@ class BGPHGrader:
         host = random.choice(all_hosts)
         shell = self.ssh_client.invoke_shell()
         output = self.vm.check_website(shell, host)
-        print(f"Test rouge output on {host}: {output}")
+        print(f"Test rogue output on {host}: {output}")
         test.add_feedback(f"Checking default on host: {host}\n")
 
         if "Default" not in output:
@@ -222,10 +222,10 @@ class BGPHGrader:
 
         shell = self.ssh_client.invoke_shell()
         output = self.vm.check_website(shell, "h5-1")
-        print(f"Test default after rouge: {output}")
+        print(f"Test default after rogue: {output}")
 
         if "Default" not in output:
-            test.add_error(-5, "Can't reach the default website after stopping rouge, -5 Points")
+            test.add_error(-5, "Can't reach the default website after stopping rogue, -5 Points")
             test.add_feedback(f"output for reference: \n{output}")
             success = False
 
@@ -244,7 +244,7 @@ class BGPHGrader:
         for host in selected_host:
             shell = self.ssh_client.invoke_shell()
             output = self.vm.check_website(shell, host)
-            print(f"Test rouge hard on {host}: {output}")
+            print(f"Test rogue hard on {host}: {output}")
 
             # Check if the attacker website is reachable on h5-1
             if "Attacker" not in output:
@@ -262,7 +262,7 @@ class BGPHGrader:
         # Check if the default website is reachable on h1-1
         shell = self.ssh_client.invoke_shell()
         output = self.vm.check_website(shell, "h1-1")
-        print(f"Test rouge hard on h1-1 (should be  default): {output}")
+        print(f"Test rogue hard on h1-1 (should be  default): {output}")
 
         if "Default" not in output:
             test.add_error(-20, "Can't reach default website on h1-1, BGP Hijacking failed, -20 Points")
@@ -307,17 +307,17 @@ class BGPHGrader:
         self._test_default_website()
 
         # test rouge website
-        print("Testing rouge website")
+        print("Testing rogue website")
         result = self.vm.start_rogue()
         self._test_rouge_website()
 
         # test default website after rouge
         result = self.vm.stop_rogue()
-        print("Testing default website after rouge")
+        print("Testing default website after rogue")
         self._test_default_website_after_rouge()
 
         # test rouge hard
-        print("Testing rouge hard")
+        print("Testing rogue hard")
         result = self.vm.start_rogue(use_hard=True)
         self._test_rouge_hard()
 
