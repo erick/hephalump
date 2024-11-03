@@ -37,11 +37,14 @@ class BGPHGrader:
 
         self.anti_hardcode_msg = "Mismatch, please ensure connectivity and topology correctness, and don't modify webserver.py"
 
-    def _copy_scripts_to_submission(self):
+    def _prepare_scripts_and_folder(self):
         # copy scripts to submission folder
         scripts = ["scripts/webserver.py", "scripts/start_rogue_hard.sh"]
         for script in scripts:
             shutil.copy(self.script_path / script, self.BGPH_path)
+
+        # ensure logs exists
+        (self.BGPH_path / "logs").mkdir(exist_ok=True)
 
     def _test_report(self):
         test = self.tests["report"]
@@ -289,7 +292,7 @@ class BGPHGrader:
             self.tests["sanity"].add_feedback("Sanity test failed, subsequent tests skipped")
             return
 
-        self._copy_scripts_to_submission()
+        self._prepare_scripts_and_folder()
         shell = self.ssh_client.invoke_shell()
         self.vm.write_file(shell, "/tmp/anti_cheating_secret5566.txt", self.anti_cheating_secret)
 
