@@ -121,7 +121,7 @@ class BGPHVirtualMachine:
             time.sleep(5)
             MAX_RETRIES -= 1
             if MAX_RETRIES < 0:
-                return Result(False, "Topology did not start, please check bgp.py")
+                return Result(False, f"Topology did not start, please check bgp.py, output: {output}")
 
         print(output)
         self.topology_start_output = output
