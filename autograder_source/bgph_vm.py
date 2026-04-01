@@ -1,5 +1,6 @@
 import os
 import socket
+import struct
 import time
 import subprocess
 import hashlib
@@ -235,7 +236,7 @@ class BGPHVirtualMachine:
         return self.init_complete
 
 
-    def _wait_for_sshd(self, hostname: str=None, port: int=None, total_wait: int = 120, interval: int = 5) -> bool:
+    def _wait_for_sshd(self, hostname: str=None, port: int=None, total_wait: int = 120, interval: int = 10) -> bool:
         """Wait until the QEMU VM sshd is initialized, which we test by looking for the SSH banner."""
         print(f"\n==> BGPHVirtualMachine._wait_for_sshd()")
 
@@ -249,22 +250,25 @@ class BGPHVirtualMachine:
         while time.time() < deadline:
             print(f"Attempting socket.create_connection() ({hostname}:{port} @ {time.asctime(time.localtime())})")
             try:
-                with socket.create_connection((hostname, port), timeout=2):
-                    break
+                s = socket.create_connection((hostname, port), timeout=2)
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
+                s.close()
+                break
             except OSError:
                 time.sleep(interval)
 
+        # wait for the SSH banner — use SO_LINGER to avoid TIME_WAIT accumulation
         deadline = time.time() + total_wait
         while time.time() < deadline:
             try:
-                with socket.create_connection((hostname, port), timeout=5) as s:
-                    s.settimeout(10)
-                    banner = s.recv(256)
-                    print(f"sshd banner [{banner}] @ {time.asctime(time.localtime())}")
-                    if banner.startswith(b"SSH-"):
-                        return True
-                    # else:
-                    #     print(f"No SSH @ {time.asctime(time.localtime())}, retrying...")
+                s = socket.create_connection((hostname, port), timeout=5)
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
+                s.settimeout(10)
+                banner = s.recv(256)
+                s.close()
+                print(f"sshd banner [{banner}] @ {time.asctime(time.localtime())}")
+                if banner.startswith(b"SSH-"):
+                    return True
             except (OSError, ConnectionResetError, socket.timeout) as e:
                 print(f"sshd error  [{e}] @ {time.asctime(time.localtime())}")
             time.sleep(interval)
