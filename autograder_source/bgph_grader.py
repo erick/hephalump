@@ -314,7 +314,6 @@ class BGPHGrader:
             return
 
         self._prepare_scripts_and_folder()
-        # self.vm.write_file("/tmp/anti_cheating_secret5566.txt", self.anti_cheating_secret)
     
         result = self.vm.start_topology(self.topology_interactive_shell)
         if not result.success:
@@ -354,9 +353,7 @@ class BGPHGrader:
 
 
 def main():
-    print(f"==> BGPHGrader.main()")
-    print(f"21.16")
-
+    print(f"==> BGPHGrader.main() -- ver. 2026-03-31 23:35")
     bgph_vm = BGPHVirtualMachine()
     result = Result()
 

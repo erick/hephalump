@@ -86,12 +86,6 @@ class BGPHVirtualMachine:
                 qemu_stderr_log.close()
 
         try:
-            # self.qemu_process = subprocess.Popen(
-            #     qemu_command,
-            #     start_new_session=True,
-            #     stdout=subprocess.DEVNULL,
-            #     stderr=subprocess.PIPE)
-
             with qemu_logs() as (qemu_stdout_log, qemu_stderr_log):
                 self.qemu_process = subprocess.Popen(
                     qemu_command,
@@ -110,9 +104,6 @@ class BGPHVirtualMachine:
             stderr_output = self.qemu_process.stderr.read().decode()
             print(f"QEMU exited immediately (code {self.qemu_process.returncode}): {stderr_output}")
             return False
-
-        # print(f"Sleeping 180s to allow time for sshd initialization on QEMU VM ({time.asctime(time.localtime())})")
-        # time.sleep(180)  # Give QEMU some time to start up
 
         print(f"Waiting for the QEMU VM sshd to initialize")
 
@@ -170,9 +161,6 @@ class BGPHVirtualMachine:
 
     def get_ssh_client(self):
         print(f"\n==> BGPHVirtualMachine.get_ssh_client()")
-
-        # if not self._wait_for_sshd(hostname=self.hostname, port=self.SSH_FWD_PORT, total_wait=120, interval=5):
-        #     print("WARNING: SSH banner never detected, attempting paramiko anyway")
 
         # Retry configuration
         max_retries = 20
@@ -285,11 +273,6 @@ class BGPHVirtualMachine:
 
     def shutdown(self):
         print(f"\n==> BGPHVirtualMachine.shutdown()")
-        # ssh_client = self.get_ssh_client()
-        # if not ssh_client:
-        #     return
-        # ssh_client.exec_command("sudo shutdown now")
-        # ssh_client.close()
         ret, out, err = self._ssh_exec_command("sudo shutdown now")
 
 
@@ -342,20 +325,6 @@ class BGPHVirtualMachine:
 
     def start_rogue(self, use_hard=False) -> Result:
         print(f"\n==> BGPHVirtualMachine.start_rogue()")
-
-        # if not use_hard:
-        #     cmd = f"cd {self.BGPHijacking_dir} && bash ./start_rogue.sh"
-        # else:
-        #     cmd = f"cd {self.BGPHijacking_dir} && bash ./start_rogue_hard.sh"
-
-        # if not self.ssh_client:
-        #     return Result(False, "SSH client not initialized")
-        # _, std_out, std_err = self.ssh_client.exec_command(cmd)
-        # return_code = std_out.channel.recv_exit_status()
-        # if return_code != 0:
-        #     return Result(False, std_err.read().decode())
-        # time.sleep(5)
-        # return Result(True)
         script = "start_rogue_hard.sh" if use_hard else "start_rogue.sh"
         ret, out, err = self._ssh_exec_command(f"cd {self.BGPHijacking_dir} && bash ./{script}")
         time.sleep(5)
@@ -365,46 +334,14 @@ class BGPHVirtualMachine:
 
     def stop_rogue(self) -> Result:
         print(f"\n==> BGPHVirtualMachine.stop_rogue()")
-        # if not self.ssh_client:
-        #     return Result(False, "SSH client not initialized")
-        # _, std_out, std_err = self.ssh_client.exec_command(f"cd {self.BGPHijacking_dir} && bash ./stop_rogue.sh")
-
-        # return_code = std_out.channel.recv_exit_status()
-        # if return_code != 0:
-        #     return Result(False, std_err.read().decode())
-
-        # time.sleep(5)
-        # return Result(True)
         ret, out, err = self._ssh_exec_command(f"cd {self.BGPHijacking_dir} && bash ./stop_rogue.sh")
         time.sleep(5)
         return Result(ret == 0, err if ret != 0 else "")
 
 
-    # def _recv_all(self, shell, timeout=10) -> str:
-    #     """Read all available data from the shell, waiting up to timeout seconds for more."""
-    #     shell.settimeout(timeout)
-    #     chunks = []
-    #     try:
-    #         while True:
-    #             chunk = shell.recv(4096)
-    #             if not chunk:
-    #                 break
-    #             chunks.append(chunk)
-    #     except socket.timeout:
-    #         pass
-    #     return b"".join(chunks).decode()
-
-
     # def check_website(self, shell, host="h5-1") -> str:
     def check_website(self, host="h5-1") -> str:
         print(f"\n==> BGPHVirtualMachine.check_website()")
-        # # self.send_cmd(shell, f"cd {self.BGPHijacking_dir} && bash ./website.sh {host}", 10)
-        # # self.send_cmd(shell, f"{chr(3)}") # ctrl+c
-        # #  /autograder/submission/BGPHijacking/run.py --node h5-1 --cmd "curl -s 11.0.1.1"
-        # self.send_cmd(shell, f"sudo python3 {self.BGPHijacking_dir}/run.py --node {host} --cmd 'curl -s 11.0.1.1'", 10)
-        # output = self._recv_all(shell)
-        # return output
-
         ret, out, err = self._ssh_exec_command(
             f"sudo python3 {self.BGPHijacking_dir}/run.py --node {host} --cmd 'curl -s 11.0.1.1'")
         return out
@@ -413,12 +350,6 @@ class BGPHVirtualMachine:
     # def bgp_messages(self, shell, router="R3") -> str:
     def bgp_messages(self, router="R3") -> str:
         print(f"\n==> BGPHVirtualMachine.bgp_messages()")
-        # # self.send_cmd(shell, f"cd {self.BGPHijacking_dir} && bash ./connect.sh {router}", 5)
-        # self.send_cmd(shell, f"sudo python3 {self.BGPHijacking_dir}/run.py --node {router} --cmd \"vtysh -c 'show ip bgp'\"", 10)
-        # # self.send_cmd(shell, f"en", 3) # password
-        # # self.send_cmd(shell, f"sh ip bgp", 3) # show BGP table
-        # output = self._recv_all(shell)
-        # return output
         ret, out, err = self._ssh_exec_command(
             f"sudo python3 {self.BGPHijacking_dir}/run.py --node {router} --cmd \"vtysh -c 'show ip bgp'\"")
         return out
@@ -426,14 +357,7 @@ class BGPHVirtualMachine:
     # def do_extra_checks(self, shell):
     def do_extra_checks(self):
         print(f"\n==> BGPHVirtualMachine.do_extra_checks()")
-        # # check is the webserver.py processes are running
-        # self.send_cmd(shell, f"sudo ps -ef | grep webserver", 10)
-        # out1 = self._recv_all(shell)
-        # # check for /tmp/anti_cheating_secret5566.txt
-        # self.send_cmd(shell, f"sudo ls -lAF /tmp/anti_cheating_secret5566.txt", 10)
-        # out2 = self._recv_all(shell)
-        # return out1 + "\n" + out2
-
+        return
         ret, out1, err = self._ssh_exec_command("ps -ef | grep webserver")
         ret, out2, err = self._ssh_exec_command("ls -lAF /tmp/anti_cheating_secret5566.txt")
         return out1 + "\n\n" + out2
