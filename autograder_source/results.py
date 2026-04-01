@@ -34,7 +34,7 @@ class Test:
         self.output += feedback + "\n"
 
     def add_feedback(self, feedback: str):
-        self.output += feedback + "\n"
+        self.output += feedback + "\n\n"
 
 
 class Result:
@@ -56,4 +56,3 @@ class Result:
     def write_json(self, output="/autograder/results/results.json"):
         with open(output, "w") as json_output:
             json.dump(self.as_dict(), json_output)
-

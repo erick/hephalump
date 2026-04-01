@@ -21,4 +21,3 @@ def all_unique(folder: Path, fn_pattern: str = "") -> bool:
             return False
         hashes.add(h)
     return True
-
