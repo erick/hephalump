@@ -5,12 +5,12 @@
 # start with the latest version of the base Gradescope image
 FROM gradescope/autograder-base:latest
 
-# the source code for the autograder
-ADD autograder_source /autograder/source
-
-# make sure the main autograder script is in the right place and executable
-RUN cp /autograder/source/run_autograder /autograder/run_autograder
-RUN chmod +x /autograder/run_autograder
+## Do whatever setup was needed in setup.sh, including installing apt packages
+## Cleans up the apt cache afterwards in the same step to keep the image small
+RUN apt-get update && \
+    apt-get install -y qemu-system && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN pip install paramiko
 
 # directory to give `run_autograder` access to the latest files without rebuilding the docker image
 # mount autograder_source here using `-v ./autograder_source:/autograder/updated_files` during `docker run`
@@ -20,12 +20,12 @@ RUN mkdir -p /autograder/updated_files
 # mount autograder_test_submission here using `-v ./autograder_test_submission:/autograder/submission` during `docker run`
 RUN mkdir -p /autograder/submission
 
-## Do whatever setup was needed in setup.sh, including installing apt packages
-## Cleans up the apt cache afterwards in the same step to keep the image small
-RUN apt-get update && \
-    apt-get install -y qemu-system && \
-    apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-RUN pip install paramiko
+# the source code for the autograder
+ADD autograder_source /autograder/source
+
+# make sure the main autograder script is in the right place and executable
+RUN cp /autograder/source/run_autograder /autograder/run_autograder
+RUN chmod +x /autograder/run_autograder
 
 # ADD autograder_test_submission /autograder/test_submission
 # ADD autograder_test_submission /autograder/submission

@@ -2,7 +2,7 @@ from pathlib import Path
 from dataclasses import dataclass
 
 @dataclass
-class Result:
+class CommandResult:
     success: bool
     message: str = ""
 

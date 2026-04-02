@@ -1,23 +1,20 @@
-import os
-import socket
-import json
-import base64
 import time
-import subprocess
+import json
+import socket
+import base64
 import hashlib
-from utils import Result
+import subprocess
+from pathlib import Path
+from utils import CommandResult
 
 
 class BGPHVirtualMachine:
     def __init__(self) -> None:
         self.topology_start_output = ""
-        self.submission_dir = "/autograder/submission/"
-        self.BGPHijacking_dir = f"{self.submission_dir}BGPHijacking"
-        self.hostipv4 = "127.0.0.1"
+        self.submission_dir = Path("/autograder/submission/BGPHijacking")
         self.SSH_FWD_PORT = 8022
         self.ga_socket_path = "/tmp/qemu-ga.sock"
         self.monitor_socket_path = "/tmp/qemu-monitor.sock"
-        self.init_complete = False
         self.anti_cheating_secret = hashlib.sha256(f"CS6250{time.time()}666".encode()).hexdigest()[0:16]
 
 
@@ -41,18 +38,19 @@ class BGPHVirtualMachine:
             "-D", "/tmp/qemu-debug.log", "-d", "guest_errors,unimp",
         ]
 
-        print(f"QEMU command:\n{' '.join(qemu_command)}")
+        print("\n\n###\n### QEMU Startup Command\n###\n")
+        print(f"{' '.join(qemu_command)}\n\n")
 
         try:
             self.qemu_process = subprocess.Popen(
                 qemu_command,
                 start_new_session=True,
                 stdin=subprocess.DEVNULL,
-                stdout=subprocess.PIPE,
+                stdout=subprocess.DEVNULL,
                 stderr=subprocess.PIPE,
             )
         except (OSError, FileNotFoundError) as e:
-            print(f"Failed to start QEMU: {e}")
+            print(f"==> QEMU VM Failed to Start:\n{e}")
             return False
 
         # Check QEMU didn't exit immediately
@@ -60,31 +58,37 @@ class BGPHVirtualMachine:
         if self.qemu_process.poll() is not None:
             stdout_output = self.qemu_process.stdout.read().decode()
             stderr_output = self.qemu_process.stderr.read().decode()
-            print(f"QEMU exited immediately (code {self.qemu_process.returncode})")
-            print(f"stdout (serial): {stdout_output}")
-            print(f"stderr: {stderr_output}")
+            print(f"==> QEMU Exited Immediately (code {self.qemu_process.returncode})")
+            print(f"STDERR:\n{stderr_output}")
             return False
 
         # Wait for the guest agent to become available
-        print("Waiting for QEMU guest agent...")
+        print("\n\n###\n### Waiting for QEMU Guest Agent\n###\n\n")
         if not self._wait_for_ga(total_wait=600, interval=10):
-            print("Guest agent never responded - exiting")
+            print("==> Guest agent never responded - exiting")
             return False
 
-        print(f"QEMU VM :: info network:\n{self.qemu_monitor_cmd('info network')}")
+        print("\n\n###\n### QEMU VM :: info network\n###\n")
+        print(f"{self.qemu_monitor_cmd('info network')}\n\n")
 
         # we have a working guest agent, now do initial setup
-
-        # Mount the submission directory via 9p virtfs
-        self.ga_exec(f"sudo mkdir -p {self.submission_dir}")
-        self.ga_exec(f"sudo mount -t 9p -o trans=virtio,msize=262144 submission {self.submission_dir}")
-        # Set permissions for scripts
-        self.ga_exec(f"cd {self.BGPHijacking_dir} && sudo chmod +x *.sh")
-        # Write the anti-cheating secret
-        self.ga_exec(f"echo '{self.anti_cheating_secret}' > /tmp/anti_cheating_secret5566.txt")
-        # Debug: show submission contents
-        ret, out, err = self.ga_exec(f"ls -lAFgR {self.submission_dir}")
-        print(out)
+        print("\n\n###\n### Setup for Grading\n###\n\n")
+        init_cmds = [
+            f"sudo mkdir -p {self.submission_dir.parent}",
+            # mount the submission directory via 9p virtfs
+            f"sudo mount -t 9p -o trans=virtio,msize=262144 submission {self.submission_dir.parent}",
+            f"cd {self.submission_dir} && sudo chmod +x *.sh",
+            f"echo '{self.anti_cheating_secret}' > /tmp/anti_cheating_secret5566.txt",
+            f"ls -lAFgR {self.submission_dir}",  # Debug: show submission contents
+        ]
+        for cmd in init_cmds:
+            ret, out, err = self.ga_exec(cmd)
+            print(f"    > {cmd} ({ret = })\nSTDOUT:\n{out.strip()}\nSTDERR:\n{err.strip()}")
+        # ret, out, err = self.ga_exec(f"sudo mkdir -p {self.submission_dir.parent}")
+        # ret, out, err = self.ga_exec(f"sudo mount -t 9p -o trans=virtio,msize=262144 submission {self.submission_dir.parent}")
+        # ret, out, err = self.ga_exec(f"cd {self.submission_dir} && sudo chmod +x *.sh")
+        # ret, out, err = self.ga_exec(f"echo '{self.anti_cheating_secret}' > /tmp/anti_cheating_secret5566.txt")
+        # ret, out, err = self.ga_exec(f"ls -lAFgR {self.submission_dir}")  # Debug: show submission contents
 
         return True
 
@@ -213,25 +217,6 @@ class BGPHVirtualMachine:
 
     ## VM lifecycle
 
-    # def init(self):
-    #     print(f"\n==> BGPHVirtualMachine.init()")
-    #     if self.init_complete:
-    #         return True
-
-    #     # Mount the submission directory via 9p virtfs
-    #     self.ga_exec(f"sudo mkdir -p {self.submission_dir}")
-    #     self.ga_exec(f"sudo mount -t 9p -o trans=virtio,msize=262144 submission {self.submission_dir}")
-    #     # Set permissions for scripts
-    #     self.ga_exec(f"cd {self.BGPHijacking_dir} && sudo chmod +x *.sh")
-    #     # Write the anti-cheating secret
-    #     self.ga_exec(f"echo '{self.anti_cheating_secret}' > /tmp/anti_cheating_secret5566.txt")
-    #     # Debug: show submission contents
-    #     ret, out, err = self.ga_exec(f"ls -lAFgR {self.submission_dir}")
-    #     print(f"     Submission contents:\n{out}")
-
-    #     self.init_complete = True
-    #     return True
-
     def shutdown(self):
         print(f"\n==> BGPHVirtualMachine.shutdown()")
         try:
@@ -250,58 +235,44 @@ class BGPHVirtualMachine:
 
     ## Topology management
 
-    def start_topology(self, total_timeout=240) -> Result:
+    def start_topology(self, total_timeout=240) -> CommandResult:
         print(f"\n==> BGPHVirtualMachine.start_topology()")
 
-        ret, out, err = self.ga_exec(f"cd {self.BGPHijacking_dir} && sudo python3 bgp.py --scriptfile /dev/null", timeout=total_timeout)
+        ret, out, err = self.ga_exec(f"cd {self.submission_dir} && sudo python3 bgp.py --scriptfile /dev/null", timeout=total_timeout)
         # ret, out, err = self.ga_exec(f"sudo python3 {bgp_py} {script} > {outfile} 2>&1", timeout=total_timeout)
-        # f"cd {self.BGPHijacking_dir} && sudo nohup python3 bgp.py > /tmp/bgp_output.log 2>&1 & disown", timeout=10)
+        # f"cd {self.submission_dir} && sudo nohup python3 bgp.py > /tmp/bgp_output.log 2>&1 & disown", timeout=10)
 
         self.topology_start_output = f"{err}\n\n{out}".strip()
         print(f"\n\n{self.topology_start_output}\n\n")
 
         # clean up processes and start the topology in the background
-        ret, out, err = self.ga_exec(f"cd {self.BGPHijacking_dir} && sudo python3 cleanup.py", timeout=120)
-        self.ga_exec_bg(f"cd {self.BGPHijacking_dir} && sudo nohup python3 bgp.py --scriptfile bgp_sleep & disown")
+        ret, out, err = self.ga_exec(f"cd {self.submission_dir} && sudo python3 cleanup.py", timeout=120)
+        self.ga_exec_bg(f"cd {self.submission_dir} && sudo nohup python3 bgp.py --scriptfile bgp_sleep & disown")
 
         time.sleep(90)
 
         if "*** Starting CLI:" in self.topology_start_output:
-            return Result(True)
+            return CommandResult(True)
         else:
             _out = self.topology_start_output
             self.topology_start_output = None
-            return Result(False, f"Topology did not start within {total_timeout}s, output: {_out}")
-
-        # Poll the log file for the Mininet CLI prompt
-        print("     Waiting for topology to start...")
-        deadline = time.time() + total_timeout
-        while time.time() < deadline:
-            time.sleep(10)
-            ret, out, err = self.ga_exec("cat /tmp/bgp_output.log", timeout=10)
-            print(f"     Topology log ({len(out)} bytes)")
-            if "*** Starting CLI:" in out:
-                self.topology_start_output = out
-                return Result(True)
-
-        ret, out, err = self.ga_exec("cat /tmp/bgp_output.log", timeout=10)
-        return Result(False, f"Topology did not start within {total_timeout}s, output: {out}")
+            return CommandResult(False, f"Topology did not start within {total_timeout}s, output: {_out}")
 
 
     ## Rogue AS management
 
-    def start_rogue(self, use_hard=False) -> Result:
+    def start_rogue(self, use_hard=False) -> CommandResult:
         print(f"\n==> BGPHVirtualMachine.start_rogue()")
         script = "start_rogue_hard.sh" if use_hard else "start_rogue.sh"
-        ret, out, err = self.ga_exec(f"cd {self.BGPHijacking_dir} && bash ./{script}")
+        ret, out, err = self.ga_exec(f"cd {self.submission_dir} && bash ./{script}")
         time.sleep(5)
-        return Result(ret == 0, err if ret != 0 else "")
+        return CommandResult(ret == 0, err if ret != 0 else "")
 
-    def stop_rogue(self) -> Result:
+    def stop_rogue(self) -> CommandResult:
         print(f"\n==> BGPHVirtualMachine.stop_rogue()")
-        ret, out, err = self.ga_exec(f"cd {self.BGPHijacking_dir} && bash ./stop_rogue.sh")
+        ret, out, err = self.ga_exec(f"cd {self.submission_dir} && bash ./stop_rogue.sh")
         time.sleep(5)
-        return Result(ret == 0, err if ret != 0 else "")
+        return CommandResult(ret == 0, err if ret != 0 else "")
 
 
     ## Test Helpers
@@ -309,18 +280,27 @@ class BGPHVirtualMachine:
     def check_website(self, host="h5-1") -> str:
         print(f"\n==> BGPHVirtualMachine.check_website()")
         ret, out, err = self.ga_exec(
-            f"sudo python3 {self.BGPHijacking_dir}/run.py --node {host} --cmd 'curl -s 11.0.1.1'")
+            f"sudo python3 {self.submission_dir}/run.py --node {host} --cmd 'curl -s 11.0.1.1'")
         return out
 
     def bgp_messages(self, router="R3") -> str:
         print(f"\n==> BGPHVirtualMachine.bgp_messages()")
         ret, out, err = self.ga_exec(
-            f"sudo python3 {self.BGPHijacking_dir}/run.py --node {router} --cmd \"vtysh -c 'show ip bgp'\"")
+            f"sudo python3 {self.submission_dir}/run.py --node {router} --cmd \"vtysh -c 'show ip bgp'\"")
         return out
 
     def do_extra_checks(self):
-        return ""
+        """
+        print out autograder debug information that might be helpful (students won't see this)
+        no need to return anything
+        """
         print(f"\n==> BGPHVirtualMachine.do_extra_checks()")
-        ret, out1, err = self.ga_exec("ps -ef | grep webserver")
-        ret, out2, err = self.ga_exec("ls -lAF /tmp/anti_cheating_secret5566.txt")
-        return out1 + "\n\n" + out2
+        debug_info_cmds = [
+            # "ps -ef | grep webserver",
+            # "ls -lAF /tmp/anti_cheating_secret5566.txt",
+        ]
+        if not debug_info_cmds:
+            print(f"    No extra checks being run right now")
+        for cmd in debug_info_cmds:
+            ret, out, err = self.ga_exec(cmd)
+            print(f"    > {cmd} (retcode = {ret})\nSTDOUT:\n{out.strip()}\nSTDERR:\n{err.strip()}")

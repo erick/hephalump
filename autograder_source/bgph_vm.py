@@ -5,7 +5,7 @@ import time
 import subprocess
 import hashlib
 import paramiko
-from utils import Result
+from utils import CommandResult
 
 class BGPHVirtualMachine:
     def __init__(self) -> None:
@@ -321,7 +321,7 @@ class BGPHVirtualMachine:
         time.sleep(sleep_sec)
 
 
-    def start_topology(self, shell, total_timeout=120) -> Result:
+    def start_topology(self, shell, total_timeout=120) -> CommandResult:
         print(f"\n==> BGPHVirtualMachine.start_topology()")
         self.send_cmd(shell, f"cd {self.BGPHijacking_dir} && sudo python3 bgp.py", 30)
         output = ""
@@ -331,7 +331,7 @@ class BGPHVirtualMachine:
         deadline = time.time() + total_timeout
         while "*** Starting CLI:" not in output:
             if time.time() > deadline:
-                return Result(False, f"Topology did not start within {total_timeout}s, please check bgp.py, output: {output}")
+                return CommandResult(False, f"Topology did not start within {total_timeout}s, please check bgp.py, output: {output}")
             try:
                 chunk = shell.recv(2048).decode()
                 output += chunk
@@ -341,7 +341,7 @@ class BGPHVirtualMachine:
 
         print(output)
         self.topology_start_output = output
-        return Result(True)
+        return CommandResult(True)
 
 
     def get_anti_cheating_secret(self) -> str:
@@ -361,20 +361,20 @@ class BGPHVirtualMachine:
         self.send_cmd(shell, "exit", 5)
 
 
-    def start_rogue(self, use_hard=False) -> Result:
+    def start_rogue(self, use_hard=False) -> CommandResult:
         print(f"\n==> BGPHVirtualMachine.start_rogue()")
         script = "start_rogue_hard.sh" if use_hard else "start_rogue.sh"
         ret, out, err = self._ssh_exec_command(f"cd {self.BGPHijacking_dir} && bash ./{script}")
         time.sleep(5)
-        return Result(ret == 0, err if ret != 0 else "")
+        return CommandResult(ret == 0, err if ret != 0 else "")
 
 
 
-    def stop_rogue(self) -> Result:
+    def stop_rogue(self) -> CommandResult:
         print(f"\n==> BGPHVirtualMachine.stop_rogue()")
         ret, out, err = self._ssh_exec_command(f"cd {self.BGPHijacking_dir} && bash ./stop_rogue.sh")
         time.sleep(5)
-        return Result(ret == 0, err if ret != 0 else "")
+        return CommandResult(ret == 0, err if ret != 0 else "")
 
 
     # def check_website(self, shell, host="h5-1") -> str:

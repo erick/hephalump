@@ -171,13 +171,12 @@ class BGPHGrader:
         success = True
 
         all_hosts = ["h2-1", "h3-1", "h4-1", "h5-1"]
-        selected_host = random.sample(all_hosts, 2)
-        test.add_feedback(f"Checking on randomly selected hosts: {selected_host}\n")
+        selected_hosts = random.sample(all_hosts, 2)
+        test.add_feedback(f"Checking on randomly selected hosts: {selected_hosts}\n")
 
-        for host in selected_host:
+        for host in selected_hosts:
             output = self.vm.check_website(host)
             print(f"Test Default website on {host}: \n{output}")
-
 
             if "Default" not in output:
                 test.add_error(-20, f"Can't reach the default website on host {host}, -20 Points\n")
@@ -261,10 +260,10 @@ class BGPHGrader:
         success = True
 
         all_hosts = ["h2-1", "h3-1", "h4-1", "h5-1"]
-        selected_host = random.sample(all_hosts, 2)
-        test.add_feedback(f"Checking on randomly selected hosts: {selected_host}\n")
+        selected_hosts = random.sample(all_hosts, 2)
+        test.add_feedback(f"Checking on randomly selected hosts: {selected_hosts}\n")
 
-        for host in selected_host:
+        for host in selected_hosts:
             output = self.vm.check_website(host)
             print(f"Test rogue hard on {host}: {output}")
 
@@ -283,7 +282,7 @@ class BGPHGrader:
 
         # Check if the default website is reachable on h1-1
         output = self.vm.check_website("h1-1")
-        print(f"Test rogue hard on h1-1 (should be  default): {output}")
+        print(f"Test rogue hard on h1-1 (should be default): {output}")
 
         if "Default" not in output:
             test.add_error(-20, "Can't reach default website on h1-1, BGP Hijacking failed, -20 Points")
