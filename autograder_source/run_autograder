@@ -8,15 +8,22 @@
 #git clone https://github.com/daniel0076/fictional-doodle.git
 #cd fictional-doodle
 
-# show available hardware acceleration for QEMU - remove after running on Gradescope
-# supported accelerators: kvm, xen, hax, hvf, nvmm, whpx or tcg (default: tcg)
-qemu-system-x86_64 -accel help
+# # show available hardware acceleration for QEMU - remove after running on Gradescope
+# # supported accelerators: kvm, xen, hax, hvf, nvmm, whpx or tcg (default: tcg)
+# qemu-system-x86_64 -accel help
 
 # mount this directory when testing/debugging using `docker run -v /path/to/updated_files:/autograder/updated_files ...`
 UPD_FILES_DIR="/autograder/updated_files"
-if [ -f "$UPD_FILES_DIR/bgph_grader.py" ]; then
-    cp -f "$UPD_FILES_DIR/bgph_grader.py" /autograder/source/bgph_grader.py
-    cp -f "$UPD_FILES_DIR/bgph_vm.py" /autograder/source/bgph_vm.py
+if [ -d "$UPD_FILES_DIR" ] && [ "$(ls -A $UPD_FILES_DIR)" ]; then
+    echo "Copying updated files from $UPD_FILES_DIR to /autograder/source/"
+    cp -rf "$UPD_FILES_DIR"/*.py /autograder/source/
 fi
 
-python3 /autograder/source/bgph_grader.py
+# # mount this directory when testing/debugging using `docker run -v /path/to/updated_files:/autograder/updated_files ...`
+# UPD_FILES_DIR="/autograder/updated_files"
+# if [ -f "$UPD_FILES_DIR/bgph_grader.py" ]; then
+#     cp -f "$UPD_FILES_DIR/bgph_grader.py" /autograder/source/bgph_grader.py
+#     cp -f "$UPD_FILES_DIR/bgph_vm.py" /autograder/source/bgph_vm.py
+# fi
+
+python3 /autograder/source/bgph_grader_ga.py

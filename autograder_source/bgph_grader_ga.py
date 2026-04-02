@@ -1,5 +1,5 @@
 #!/bin/python3
-from bgph_vm import BGPHVirtualMachine
+from bgph_vm_ga import BGPHVirtualMachine
 from results import Result, Test
 from utils import all_unique
 from pathlib import Path
@@ -12,20 +12,9 @@ class BGPHGrader:
     def __init__(self, vm: BGPHVirtualMachine) -> None:
         self.script_path = Path(__file__).parent
         self.BGPH_path = Path("/autograder/submission/BGPHijacking")
-        # self.anti_cheating_secret = hashlib.sha256(f"CS6250{time.time()}666".encode()).hexdigest()[0:16]
 
         self.vm = vm
-        ssh_client = self.vm.ssh_client   # reuse the existing connection
-        # ssh_client = self.vm.get_ssh_client()
-        if not ssh_client:
-            print("Failed to connect to the VM")
-            exit(1)
-
         self.anti_cheating_secret = self.vm.get_anti_cheating_secret()
-
-        # open the shells
-        self.topology_interactive_shell = ssh_client.invoke_shell()
-        self.ssh_client = ssh_client
 
         self.tests = {
             "report": Test("Report", max_score=5),
@@ -42,7 +31,7 @@ class BGPHGrader:
     def _prepare_scripts_and_folder(self):
         print(f"==> BGPHGrader._prepare_scripts_and_folder()")
         # copy scripts to submission folder
-        scripts = ["scripts/webserver.py", "scripts/start_rogue_hard.sh"]
+        scripts = ["scripts/webserver.py", "scripts/start_rogue_hard.sh", "scripts/cleanup.py", "scripts/bgp_sleep"]
         for script in scripts:
             shutil.copy(self.script_path / script, self.BGPH_path)
 
@@ -178,7 +167,6 @@ class BGPHGrader:
             output = self.vm.check_website(host)
             print(f"Test Default website on {host}: \n{output}")
 
-
             if "Default" not in output:
                 test.add_error(-20, f"Can't reach the default website on host {host}, -20 Points\n")
                 test.add_feedback(f"{host} output for reference: \n{output}")
@@ -268,7 +256,7 @@ class BGPHGrader:
             output = self.vm.check_website(host)
             print(f"Test rogue hard on {host}: {output}")
 
-            # Check if the attacker website is reachable on h5-1
+            # Check if the attacker website is reachable
             if "Attacker" not in output:
                 test.add_error(-test.max_score, f"Can't reach attacker website on {host}, BGP Hijacking failed, -20 Points")
                 test.add_feedback(f"output for reference: \n{output}")
@@ -283,7 +271,7 @@ class BGPHGrader:
 
         # Check if the default website is reachable on h1-1
         output = self.vm.check_website("h1-1")
-        print(f"Test rogue hard on h1-1 (should be  default): {output}")
+        print(f"Test rogue hard on h1-1 (should be default): {output}")
 
         if "Default" not in output:
             test.add_error(-20, "Can't reach default website on h1-1, BGP Hijacking failed, -20 Points")
@@ -304,44 +292,47 @@ class BGPHGrader:
 
         # report check
         success = self._test_report()
-        print("Report test success: ", success)
+        print(f"\n\n###\n### Report Test Success:\n### {success}\n###\n\n")
 
         # config sanity check
         success = self._test_sanity()
-        print("Sanity test success: ", success)
+        print(f"\n\n###\n### Sanity Test Success:\n### {success}\n###\n\n")
         if not success:
             self.tests["sanity"].add_feedback("Sanity test failed, subsequent tests skipped")
             return
 
         self._prepare_scripts_and_folder()
-    
-        result = self.vm.start_topology(self.topology_interactive_shell)
+
+        result = self.vm.start_topology()
         if not result.success:
             self.tests["default_website"].add_feedback(result.message)
             return
 
         # test topology
-        print("Testing topology")
+        print("\n\n###\n### Testing Topology\n###\n\n")
         self._test_topology()
 
+        time.sleep(60) # add another wait for the topology to come up
+
         # test default website
-        print("Testing default website")
+        print("\n\n###\n### Testing Default Website\n###\n\n")
         self._test_default_website()
 
         # test rogue website
-        print("Testing rogue website")
+        print("\n\n###\n### Testing Rogue Website\n###\n\n")
         result = self.vm.start_rogue()
         self._test_rogue_website()
 
         # test default website after rogue
         result = self.vm.stop_rogue()
+        print("\n\n###\n### Testing Default Website After Rogue\n###\n\n")
         print("Waiting 30s for BGP re-convergence after stopping rogue")
         time.sleep(30)
         print("Testing default website after rogue")
         self._test_default_website_after_rogue()
 
         # test rogue hard
-        print("Testing rogue hard")
+        print("\n\n###\n### Testing Rogue Hard\n###\n\n")
         result = self.vm.start_rogue(use_hard=True)
         self._test_rogue_hard()
 
@@ -353,8 +344,9 @@ class BGPHGrader:
 
 
 def main():
-    version = "2026-04-01 01:17"
+    version = "2026-04-01 GA"
     print(f"==> BGPHGrader.main() -- ver. {version}")
+
     bgph_vm = BGPHVirtualMachine()
     result = Result()
 

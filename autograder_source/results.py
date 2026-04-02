@@ -1,6 +1,7 @@
 import json
 from dataclasses import dataclass, asdict
 from typing import List
+from pathlib import Path
 
 
 @dataclass
@@ -54,5 +55,6 @@ class Result:
         return results
 
     def write_json(self, output="/autograder/results/results.json"):
+        Path(output).parent.mkdir(parents=True, exist_ok=True)
         with open(output, "w") as json_output:
             json.dump(self.as_dict(), json_output)

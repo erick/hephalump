@@ -4,7 +4,6 @@ import struct
 import time
 import subprocess
 import hashlib
-from contextlib import contextmanager
 import paramiko
 from utils import Result
 
@@ -14,7 +13,7 @@ class BGPHVirtualMachine:
         self.submission_dir = "/autograder/submission/"
         self.BGPHijacking_dir = f"{self.submission_dir}BGPHijacking"
         self.ssh_client = None
-        self.hostname = "localhost"
+        self.hostipv4 = "127.0.0.1"
         self.SSH_FWD_PORT = 8022
         self.username = "mininet"
         self.password = "mininet"
@@ -22,16 +21,16 @@ class BGPHVirtualMachine:
         self.anti_cheating_secret = hashlib.sha256(f"CS6250{time.time()}666".encode()).hexdigest()[0:16]
 
 
-    def _kvm_available(self) -> bool:
-        """Check if KVM is available on this host"""
-        return os.path.exists("/dev/kvm") and os.access("/dev/kvm", os.R_OK | os.W_OK)
+    # def _kvm_available(self) -> bool:
+    #     """Check if KVM is available on this host"""
+    #     return os.path.exists("/dev/kvm") and os.access("/dev/kvm", os.R_OK | os.W_OK)
 
 
     def start_vm(self):
         print(f"\n==> BGPHVirtualMachine.start_vm()")
 
-        use_kvm = self._kvm_available()
-        print(f"KVM available: {use_kvm}")
+        # use_kvm = self._kvm_available()
+        # print(f"KVM available: {use_kvm}")
 
         # qemu_command = [
         #     "qemu-system-x86_64",  # QEMU binary
@@ -62,39 +61,49 @@ class BGPHVirtualMachine:
             "qemu-system-x86_64",  # QEMU binary
             "-m", "1536",  # Memory allocation in MB
             "-display", "none",
-            "-serial", "none",
-            "-monitor", "none",
+            "-serial", "stdio",  # was "none"
+            "-monitor", "unix:/tmp/qemu-monitor.sock,server,nowait",
+            # "-net", "nic,model=virtio",  # Network interface configuration
+            # "-net", f"user,net=192.168.101.0/24,hostfwd=tcp::{self.SSH_FWD_PORT}-:22",  # User-mode networking with port forwarding
             "-device", "virtio-net-pci,netdev=net0",
             "-netdev", f"user,id=net0,net=192.168.101.0/24,hostfwd=tcp::{self.SSH_FWD_PORT}-:22",
             "-virtfs", "local,id=hostshare,path=/autograder/submission,mount_tag=submission,security_model=none",
-            # "-drive", "file=/autograder/source/mininet-vm-x86_64.vmdk,format=vmdk",
             "-drive", "file=/autograder/source/mininet-vm-x86_64.qcow2,format=qcow2",
+            "-no-reboot",
+            "-D", "/tmp/qemu-debug.log", "-d", "guest_errors,unimp",
         ]
 
-        if use_kvm:
-            qemu_command.insert(1, "-enable-kvm")
+        # if use_kvm:
+        #     qemu_command.insert(1, "-enable-kvm")
 
         print(f"QEMU command:\n{' '.join(qemu_command)}")
 
-        @contextmanager
-        def qemu_logs():
-            qemu_stdout_log = open("qemu_stdout.log", "ab")
-            qemu_stderr_log = open("qemu_stderr.log", "ab")
-            try:
-                yield qemu_stdout_log, qemu_stderr_log
-            finally:
-                qemu_stdout_log.close()
-                qemu_stderr_log.close()
+        # @contextmanager
+        # def qemu_logs():
+        #     qemu_stdout_log = open("qemu_stdout.log", "ab")
+        #     qemu_stderr_log = open("qemu_stderr.log", "ab")
+        #     try:
+        #         yield qemu_stdout_log, qemu_stderr_log
+        #     finally:
+        #         qemu_stdout_log.close()
+        #         qemu_stderr_log.close()
 
         try:
-            with qemu_logs() as (qemu_stdout_log, qemu_stderr_log):
-                self.qemu_process = subprocess.Popen(
-                    qemu_command,
-                    start_new_session=True,
-                    stdin=subprocess.DEVNULL,
-                    stdout=qemu_stdout_log,
-                    stderr=qemu_stderr_log,
-                )
+            self.qemu_process = subprocess.Popen(
+                qemu_command,
+                start_new_session=True,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+        #     with qemu_logs() as (qemu_stdout_log, qemu_stderr_log):
+        #         self.qemu_process = subprocess.Popen(
+        #             qemu_command,
+        #             start_new_session=True,
+        #             stdin=subprocess.DEVNULL,
+        #             stdout=qemu_stdout_log,
+        #             stderr=qemu_stderr_log,
+        #         )
         except (OSError, FileNotFoundError) as e:
             print(f"Failed to start QEMU: {e}")
             return False
@@ -102,18 +111,43 @@ class BGPHVirtualMachine:
         # Check QEMU didn't exit immediately (e.g. bad args, missing VMDK)
         time.sleep(3)
         if self.qemu_process.poll() is not None:
+            stdout_output = self.qemu_process.stdout.read().decode()
             stderr_output = self.qemu_process.stderr.read().decode()
-            print(f"QEMU exited immediately (code {self.qemu_process.returncode}): {stderr_output}")
+            print(f"QEMU exited immediately (code {self.qemu_process.returncode})")
+            print(f"stdout (serial): {stdout_output}")
+            print(f"stderr: {stderr_output}")
             return False
 
-        print(f"Waiting for the QEMU VM sshd to initialize")
+        print(f"     Waiting for the QEMU VM sshd to initialize")
 
-        # wait here until we see an SSH banner
-        if not self._wait_for_sshd(hostname=self.hostname, port=self.SSH_FWD_PORT, total_wait=600, interval=5):
+        print(f"     Sleeping for 120s to give the QEMU VM time to boot and sshd to initialize")
+        # There is also retry logic in get_ssh_client() that will wait for sshd to initialize
+        time.sleep(120)
+
+        print(f"     Waiting for the QEMU VM sshd banner")
+        if not self._wait_for_sshd(hostname=self.hostipv4, port=self.SSH_FWD_PORT, total_wait=600, interval=5):
             print("QEMU VM sshd never initialized - exiting")
             return False
 
+        print(f"QEMU network info:\n{self.qemu_monitor_cmd('info network')}")
+
         return self.init()
+
+
+    def qemu_monitor_cmd(self, cmd: str) -> str:
+        """Send a command to the QEMU monitor via Unix socket."""
+        try:
+            s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            s.connect("/tmp/qemu-monitor.sock")
+            s.settimeout(5)
+            s.recv(1024)  # consume the "(qemu) " prompt
+            s.send((cmd + "\n").encode())
+            time.sleep(1)
+            response = s.recv(4096).decode()
+            s.close()
+            return response
+        except (OSError, socket.timeout) as e:
+            return f"Monitor error: {e}"
 
 
     def _attempt_ssh_connection(self, hostname: str = None, port: int = None, username: str = None, password: str = None,
@@ -121,7 +155,7 @@ class BGPHVirtualMachine:
         print(f"\n==> BGPHVirtualMachine._attempt_ssh_connection()")
 
         if hostname is None:
-            hostname = self.hostname
+            hostname = self.hostipv4
         if port is None:
             port = self.SSH_FWD_PORT
         if username is None:
@@ -165,14 +199,14 @@ class BGPHVirtualMachine:
 
         # Retry configuration
         max_retries = 20
-        retry_interval = 10  # seconds
+        retry_interval = 15  # seconds
         client_connect_timeout = 10  # seconds (increased from 3)
 
         ssh_client = None
         for attempt in range(max_retries):
             print(f"SSH connection attempt {attempt + 1}/{max_retries}")
             ssh_client = self._attempt_ssh_connection(
-                hostname=self.hostname, port=self.SSH_FWD_PORT, username=self.username, password=self.password, timeout=client_connect_timeout)
+                hostname=self.hostipv4, port=self.SSH_FWD_PORT, username=self.username, password=self.password, timeout=client_connect_timeout)
             if ssh_client:
                 break
             time.sleep(retry_interval)  # Wait before the next attempt
@@ -194,7 +228,7 @@ class BGPHVirtualMachine:
             retcode = std_out.channel.recv_exit_status()
             std_err_txt = std_err.read().decode()
             std_out_txt = std_out.read().decode()
-            print(f" ({retcode =})")
+            print(f" ({retcode = })")
 
             if show_output and std_out_txt:
                 print(f"     stdout:\n{std_out_txt}\n")
@@ -241,7 +275,7 @@ class BGPHVirtualMachine:
         print(f"\n==> BGPHVirtualMachine._wait_for_sshd()")
 
         if hostname is None:
-            hostname = self.hostname
+            hostname = self.hostipv4
         if port is None:
             port = self.SSH_FWD_PORT
 
@@ -261,9 +295,9 @@ class BGPHVirtualMachine:
         deadline = time.time() + total_wait
         while time.time() < deadline:
             try:
-                s = socket.create_connection((hostname, port), timeout=5)
+                s = socket.create_connection((hostname, port), timeout=15)
                 s.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
-                s.settimeout(10)
+                s.settimeout(15)
                 banner = s.recv(256)
                 s.close()
                 print(f"sshd banner [{banner}] @ {time.asctime(time.localtime())}")
