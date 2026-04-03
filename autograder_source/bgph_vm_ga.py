@@ -300,7 +300,8 @@ class BGPHVirtualMachine:
         """
         print(f"\n==> BGPHVirtualMachine.do_extra_checks()")
         debug_info_cmds = [
-            # "ps -ef | grep webserver",
+            f"sudo python3 {self.submission_dir}/run.py --list",
+            "ps aux",
             # "ls -lAF /tmp/anti_cheating_secret5566.txt",
         ]
         if not debug_info_cmds:
