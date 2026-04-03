@@ -149,7 +149,7 @@ class BGPHGrader:
                 test.add_error(-5, f"Missing prefix: {prefix}, please check connectivity between routers and BGP configuration, -5 points")
                 success = False
 
-        test.add_feedback(f"{random_router}: vtysh -c 'show ip bgp' output: \n{bgp_messages}")
+        test.add_feedback(f"{random_router}: vtysh -c 'show ip bgp' output: \n{bgp_messages.strip()}")
         test.set_passed(success)
         return success
 
@@ -165,12 +165,12 @@ class BGPHGrader:
 
         if not output or expected not in output:
             test.add_error(deduction, f"Can't reach {expected.lower()} website from {host}, {deduction} Points")
-            test.add_feedback(f"{host} received: [{output}]")
+            test.add_feedback(f"{host} received: [{output.strip()}]")
             return False
         else:
             if self.anti_cheating_secret not in output:
                 test.add_error(-test.max_score, self.anti_hardcode_msg)
-                test.add_feedback(f"{host} received: [{output}]")
+                test.add_feedback(f"{host} received: [{output.strip()}]")
                 return False
 
         return True
@@ -254,11 +254,11 @@ class BGPHGrader:
 
         # report check
         success = self._test_report()
-        print(f"\n\n###\n### Report Test Success:\n### {success}\n###\n\n")
+        print(f"\n\n###\n### Report Test Success: {success}\n###\n")
 
         # config sanity check
         success = self._test_sanity()
-        print(f"\n\n###\n### Sanity Test Success:\n### {success}\n###\n\n")
+        print(f"\n\n###\n### Sanity Test Success: {success}\n###\n")
         if not success:
             self.tests["sanity"].add_feedback("Sanity test failed, subsequent tests skipped")
             return

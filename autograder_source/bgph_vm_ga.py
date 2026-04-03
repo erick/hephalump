@@ -38,7 +38,7 @@ class BGPHVirtualMachine:
             "-D", "/tmp/qemu-debug.log", "-d", "guest_errors,unimp",
         ]
 
-        print("\n\n###\n### QEMU Startup Command\n###\n")
+        print("\n\n###\n### QEMU Startup Command\n###")
         print(f"{' '.join(qemu_command)}\n\n")
 
         try:
@@ -63,12 +63,11 @@ class BGPHVirtualMachine:
             return False
 
         # Wait for the guest agent to become available
-        print("\n\n###\n### Waiting for QEMU Guest Agent\n###\n\n")
+        print("\n\n###\n### Waiting for QEMU Guest Agent\n###")
         if not self._wait_for_ga(total_wait=600, interval=10):
             print("==> Guest agent never responded - exiting")
             return False
 
-        print("\n\n###\n### QEMU VM :: info network\n###\n")
         print(f"{self.qemu_monitor_cmd('info network')}\n\n")
 
         # we have a working guest agent, now do initial setup
@@ -83,7 +82,12 @@ class BGPHVirtualMachine:
         ]
         for cmd in init_cmds:
             ret, out, err = self.ga_exec(cmd)
-            print(f"    > {cmd} ({ret = })\nSTDOUT:\n{out.strip()}\nSTDERR:\n{err.strip()}")
+            # print(f"    > {cmd} ({ret = })\nSTDOUT:\n{out.strip()}\nSTDERR:\n{err.strip()}")
+            print(f"    > {cmd} ({ret = })")
+            if out:
+                print(f"STDOUT:\n{out.strip()}")
+            if err:
+                print(f"STDERR:\n{err.strip()}")
         # ret, out, err = self.ga_exec(f"sudo mkdir -p {self.submission_dir.parent}")
         # ret, out, err = self.ga_exec(f"sudo mount -t 9p -o trans=virtio,msize=262144 submission {self.submission_dir.parent}")
         # ret, out, err = self.ga_exec(f"cd {self.submission_dir} && sudo chmod +x *.sh")
